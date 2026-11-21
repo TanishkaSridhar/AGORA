@@ -1,0 +1,15 @@
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 80
+env:
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    availability: [RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: agora26
+  - variable: CIVIC_SESSION_SECRET
+    secret: CIVIC_SESSION_SECRET
+    availability: [RUNTIME]
