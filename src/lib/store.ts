@@ -11,7 +11,7 @@ const noticeMemory = state.civicNotices ??= new Map()
 const summaryFields = ['id', 'refNo', 'title', 'originalDescription', 'translatedDescription', 'detectedLanguage', 'location', 'aiTriage',
   'aiPending', 'resolutionVerification', 'status', 'assignedDepartment', 'assignedOfficer', 'handledBy', 'citizen', 'feedback',
   'reopenCount', 'remindersSent', 'upvotes', 'duplicateMergeCount', 'createdAt', 'updatedAt', 'audit']
-type RecordData = Omit<CivicIssue, 'corroboratingImages' | 'resolutionImageBase64'>
+type RecordData = Omit<CivicIssue, 'corroboratingImages' | 'resolutionImageBase64' | 'voiceNote'>
 function database() {
   const localAdc = join(process.env.APPDATA || join(homedir(), '.config'), 'gcloud', 'application_default_credentials.json')
   const configured = process.env.FIRESTORE_EMULATOR_HOST || process.env.GOOGLE_APPLICATION_CREDENTIALS
@@ -59,19 +59,21 @@ export async function getIssue(id: string): Promise<CivicIssue | undefined> {
   const ref = col.doc(id)
   const [record, evidence] = await Promise.all([ref.get(), ref.collection('evidence').get()])
   if (!record.exists) return
-  const photos = evidence.docs.map(doc => ({ id: doc.id, image: doc.get('image') as string }))
+  const photos = evidence.docs.filter(doc => doc.id !== 'voice').map(doc => ({ id: doc.id, image: doc.get('image') as string }))
+  const voice = evidence.docs.find(doc => doc.id === 'voice')?.get('audio') as string | undefined
   const issue = record.data() as CivicIssue
   const after = photos.find(item => item.id === 'after')?.image ?? issue.resolutionImageBase64
   return {
     ...issue,
     corroboratingImages: [...(issue.corroboratingImages ?? []), ...photos.filter(item => item.id !== 'after').map(item => item.image)],
     ...(after ? { resolutionImageBase64: after } : {}),
+    ...(voice ? { voiceNote: voice } : {}),
   }
 }
 
 function write(tx: Transaction, ref: FirebaseFirestore.DocumentReference, issue: CivicIssue) {
-  const { corroboratingImages: _evidence, resolutionImageBase64: _after, ...rest } = issue
-  void [_evidence, _after]
+  const { corroboratingImages: _evidence, resolutionImageBase64: _after, voiceNote: _voice, ...rest } = issue
+  void [_evidence, _after, _voice]
   const record: RecordData = JSON.parse(JSON.stringify({ ...rest, audit: issue.audit?.slice(-50) }))
   tx.set(ref, record)
 }
@@ -129,6 +131,7 @@ export async function commitReport(issue: CivicIssue, existing: CivicIssue[], ma
     const ref = col.doc(updated.id)
     write(tx, ref, updated)
     if (match) tx.set(ref.collection('evidence').doc(issue.id), { image: issue.imageBase64 })
+    else if (issue.voiceNote) tx.set(ref.collection('evidence').doc('voice'), { audio: issue.voiceNote })
     tx.set(lock, { lastReport: issue.id })
     return updated
   })

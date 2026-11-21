@@ -108,11 +108,13 @@ export function triage(report: Report) {
     department: enumeration(departments), severity: integer,
     urgencyLabel: enumeration(['Low', 'Moderate', 'High', 'Critical']), confidence: number,
     hazardSummary: string, cascadingRiskAlert: string, recommendedAction: string,
-    citizenReplyNative: string, estimatedSlaHours: integer, isValidCivicIssue: boolean,
-  }, ['cascadingRiskAlert'])
+    citizenReplyNative: string, estimatedSlaHours: integer, isValidCivicIssue: boolean, transcript: string,
+  }, ['cascadingRiskAlert', 'transcript'])
   return generate(triageSchema, schema,
-    'You triage Indian municipal infrastructure. Reject spam, unrelated images and unsupported civic claims. Detect the actual complaint language and use it for the acknowledgement and safety advisory, using the preferred language only if detection is ambiguous. Provide an English title, translation and formal engineering work order. Score severity from 1 to 5, confidence from 0 to 1 and estimate the response SLA in whole hours. Include a cascading risk only when supported by visible or reported context, considering monsoon exposure and vulnerable sites.',
-    [{ text: JSON.stringify({ ...report, imageBase64: undefined, citizen: undefined }) }, photo(report.imageBase64)], 20_000)
+    'You triage Indian municipal infrastructure. Reject spam, unrelated images and unsupported civic claims. Detect the actual complaint language and use it for the acknowledgement and safety advisory, using the preferred language only if detection is ambiguous. Provide an English title, translation and formal engineering work order. Score severity from 1 to 5, confidence from 0 to 1 and estimate the response SLA in whole hours. Include a cascading risk only when supported by visible or reported context, considering monsoon exposure and vulnerable sites. If a voice note is attached it is the citizen\'s complaint, often from someone who cannot read or write: transcribe it verbatim in the spoken language into transcript, detect the language from the speech, and use it together with any typed text. A category picked by tapping a picture may be given; treat it only as a hint. A photo with no description is acceptable if the problem is visible.',
+    [{ text: JSON.stringify({ ...report, imageBase64: undefined, audio: undefined, citizen: undefined }) }, photo(report.imageBase64),
+      ...(report.audio ? [{ text: 'Voice note from the citizen:' }, { inlineData: { mimeType: 'audio/wav', data: report.audio.split(',')[1] } }] : [])],
+    report.audio ? 30_000 : 20_000)
 }
 
 const keywordRoutes: [Department, RegExp][] = [
@@ -134,12 +136,18 @@ const acknowledgements: Record<Language, string> = {
 }
 
 /** Keyword routing used only when every Gemini model is unavailable. Tickets are flagged for AI re-triage. */
+const categoryRoutes: Record<string, Department> = {
+  road: 'Roads & Infrastructure', garbage: 'Sanitation & Solid Waste', drain: 'Water Supply & Drainage',
+  light: 'Street Lighting & Electrical', tree: 'Public Safety & Parks',
+}
+
 export function fallbackTriage(report: Report): z.infer<typeof triageSchema> {
-  const department = keywordRoutes.find(([, pattern]) => pattern.test(report.description))?.[0] ?? 'Roads & Infrastructure'
+  const department = keywordRoutes.find(([, pattern]) => pattern.test(report.description))?.[0]
+    ?? (report.category && categoryRoutes[report.category]) ?? 'Roads & Infrastructure'
   const severity = /school|hospital|child|accident|electrocut|live wire|collapse|flood|स्कूल|बच्च/i.test(report.description) ? 4 : 3
-  const title = report.description.replace(/\s+/g, ' ').slice(0, 80)
+  const title = report.description.replace(/\s+/g, ' ').slice(0, 80) || (report.audio ? 'Voice complaint (awaiting AI transcription)' : 'Photo complaint') + ' · ' + department
   return {
-    title, translatedDescription: report.description, detectedLanguage: String(report.preferredLanguage),
+    title, translatedDescription: report.description || title, detectedLanguage: String(report.preferredLanguage),
     category: 'Pending AI review', department, severity, urgencyLabel: urgency(severity), confidence: 0.4,
     hazardSummary: 'Routed by keyword rules while AI triage was unavailable. Awaiting AI review.',
     recommendedAction: 'Inspect the reported location and record findings. AI work order pending.',

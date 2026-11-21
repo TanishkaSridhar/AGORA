@@ -42,12 +42,16 @@ export const locationSchema = z.object({
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
 }).refine(({ lat, lng }) => (lat === undefined) === (lng === undefined), 'Provide both GPS coordinates')
+export const categories = ['road', 'garbage', 'drain', 'light', 'tree', 'other'] as const
+/** 8 kHz mono WAV voice note recorded in the browser (max ~40 s). */
+export const wavVoice = z.string().max(900_000).regex(/^data:audio\/wav;base64,[A-Za-z0-9+/]+={0,2}$/, 'Invalid voice recording')
 export const reportSchema = z.object({
-  imageBase64: jpeg, description: sentence,
+  imageBase64: jpeg, description: z.string().trim().max(2500).default(''),
+  audio: wavVoice.optional(), category: z.enum(categories).optional(),
   preferredLanguage: z.custom<Language>(value => typeof value === 'string' && Object.hasOwn(languages, value)).default('English'),
   location: locationSchema,
   citizen: z.object({ name: z.string().trim().min(1).max(100), mobile: mobileSchema.optional() }).optional(),
-})
+}).refine(report => report.description.length >= 3 || !!report.audio, 'Describe the problem or record a voice note')
 
 export const triageSchema = z.object({
   title: sentence, translatedDescription: sentence, detectedLanguage: sentence,
@@ -57,6 +61,7 @@ export const triageSchema = z.object({
   cascadingRiskAlert: sentence.optional(), recommendedAction: sentence,
   citizenReplyNative: sentence, estimatedSlaHours: z.number().int().min(1).max(8760),
   isValidCivicIssue: z.boolean(),
+  transcript: z.string().trim().max(2500).optional(),
 })
 export const verificationSchema = z.object({
   verified: z.boolean(), confidence: z.number().min(0).max(1), notes: sentence,
@@ -87,7 +92,9 @@ export interface CivicIssue {
   corroboratingImages: string[]
   resolutionImageBase64?: string
   location: Report['location']
-  aiTriage: Omit<Triage, 'title' | 'translatedDescription' | 'detectedLanguage'>
+  aiTriage: Omit<Triage, 'title' | 'translatedDescription' | 'detectedLanguage' | 'transcript'>
+  /** Citizen's original voice note (WAV data URL); visible to officers and the filing citizen only. */
+  voiceNote?: string
   /** True when Gemini was unavailable and the ticket was routed by keyword rules. */
   aiPending?: boolean
   resolutionVerification?: Verification
@@ -105,7 +112,7 @@ export interface CivicIssue {
   updatedAt: string
   audit?: AuditEntry[]
 }
-export type IssueSummary = Omit<CivicIssue, 'imageBase64' | 'resolutionImageBase64' | 'corroboratingImages'>
+export type IssueSummary = Omit<CivicIssue, 'imageBase64' | 'resolutionImageBase64' | 'corroboratingImages' | 'voiceNote'>
 
 export interface Notice {
   id: string

@@ -18,7 +18,7 @@ export function route<T extends unknown[]>(handler: (...args: T) => Promise<Resp
 }
 
 export async function json(request: Request) {
-  const maxBytes = 770_000
+  const maxBytes = 1_800_000 // photo (≤750 KB) + optional voice note (≤900 KB)
   if (Number(request.headers.get('content-length')) > maxBytes) throw new HttpError(413, 'Request is too large')
   if (!request.body) throw new HttpError(400, 'A JSON request body is required')
   const reader = request.body.getReader()

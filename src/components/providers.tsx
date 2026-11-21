@@ -3,24 +3,14 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { AuthSession } from '../lib/model'
 import { request } from './client'
+import { dictionary, isLang, type Key, type Lang } from './i18n'
 
+export type { Key, Lang }
 export type Session = AuthSession & { demoEnabled: boolean; otpDisplay: boolean; googleEnabled: boolean }
-type Lang = 'en' | 'hi'
-
-const dictionary = {
-  home: ['Home', 'मुख्य पृष्ठ'], lodge: ['Lodge Grievance', 'शिकायत दर्ज करें'], track: ['Track Status', 'स्थिति देखें'],
-  dashboard: ['Public Dashboard', 'सार्वजनिक डैशबोर्ड'], charter: ['Citizen Charter', 'नागरिक चार्टर'], help: ['Help & FAQ', 'सहायता'],
-  my: ['My Grievances', 'मेरी शिकायतें'], console: ['Officer Console', 'अधिकारी कंसोल'], login: ['Login', 'लॉगिन'], logout: ['Logout', 'लॉगआउट'],
-  portal: ['Citizen Grievance Redressal Portal', 'नागरिक शिकायत निवारण पोर्टल'],
-  corp: ['Municipal Corporation · Integrated Public Grievance System', 'नगर निगम · एकीकृत लोक शिकायत प्रणाली'],
-  skip: ['Skip to main content', 'मुख्य सामग्री पर जाएं'], screen: ['Screen reader access', 'स्क्रीन रीडर'],
-  updates: ['Latest updates', 'नवीनतम सूचना'], emergency: ['Emergency', 'आपातकाल'],
-} as const
-export type Key = keyof typeof dictionary
 
 const Context = createContext<{
   session?: Session; refresh: () => Promise<Session | undefined>; lang: Lang; setLang: (lang: Lang) => void; t: (key: Key) => string
-}>({ refresh: async () => undefined, lang: 'en', setLang: () => {}, t: key => dictionary[key][0] })
+}>({ refresh: async () => undefined, lang: 'en', setLang: () => {}, t: key => dictionary[key].en })
 
 function store(name: string, value?: string) {
   try {
@@ -38,13 +28,13 @@ export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh()
     const saved = store('agora-lang')
-    if (saved === 'hi') setLangState('hi')
+    if (isLang(saved)) { setLangState(saved); document.documentElement.lang = saved }
     const size = store('agora-font')
     if (size) document.documentElement.style.fontSize = size
     if (store('agora-contrast') === 'high') document.documentElement.dataset.contrast = 'high'
   }, [refresh])
-  const setLang = (next: Lang) => { setLangState(next); store('agora-lang', next); document.documentElement.lang = next === 'hi' ? 'hi' : 'en' }
-  const t = (key: Key) => dictionary[key][lang === 'hi' ? 1 : 0]
+  const setLang = (next: Lang) => { setLangState(next); store('agora-lang', next); document.documentElement.lang = next }
+  const t = (key: Key) => dictionary[key][lang] || dictionary[key].en
   return <Context.Provider value={{ session, refresh, lang, setLang, t }}>{children}</Context.Provider>
 }
 

@@ -24,15 +24,17 @@ export async function submitReport(input: unknown, session: AuthSession = { name
     triaged = fallbackTriage(report)
     aiPending = true
   }
-  const { title, translatedDescription, detectedLanguage, ...aiTriage } = triaged
+  const { title, translatedDescription, detectedLanguage, transcript, ...aiTriage } = triaged
   if (!aiTriage.isValidCivicIssue) throw new HttpError(400, 'The photo and description must show a civic infrastructure issue.')
   const now = new Date()
   const citizen = session.mobile
     ? { name: report.citizen?.name || session.name, mobile: session.mobile }
     : report.citizen ? { name: report.citizen.name, ...(report.citizen.mobile ? { mobile: report.citizen.mobile } : {}) } : undefined
   const issue: CivicIssue = {
-    id: randomUUID(), refNo: newRefNo(now), title, originalDescription: report.description, translatedDescription, detectedLanguage,
+    id: randomUUID(), refNo: newRefNo(now), title, translatedDescription, detectedLanguage,
+    originalDescription: [report.description, transcript && '🎤 ' + transcript].filter(Boolean).join('\n') || '🎤 Voice complaint · transcription pending',
     imageBase64: report.imageBase64, corroboratingImages: [], location: report.location, aiTriage,
+    ...(report.audio ? { voiceNote: report.audio } : {}),
     ...(aiPending ? { aiPending: true } : {}), ...(citizen ? { citizen } : {}),
     status: 'OPEN', assignedDepartment: aiTriage.department, upvotes: 0, duplicateMergeCount: 0,
     createdAt: now.toISOString(), updatedAt: now.toISOString(),
@@ -56,8 +58,8 @@ export async function submitReport(input: unknown, session: AuthSession = { name
 }
 
 export function summary(issue: CivicIssue): IssueSummary {
-  const { imageBase64: _before, resolutionImageBase64: _after, corroboratingImages: _evidence, ...metadata } = issue
-  void [_before, _after, _evidence]
+  const { imageBase64: _before, resolutionImageBase64: _after, corroboratingImages: _evidence, voiceNote: _voice, ...metadata } = issue
+  void [_before, _after, _evidence, _voice]
   return metadata
 }
 
@@ -80,7 +82,9 @@ export async function visibleIssue(id: string, request: Request) {
   if (session.role === 'DEPT_STAFF' && issue.assignedDepartment !== session.department) {
     throw new HttpError(403, 'This issue belongs to another department')
   }
-  return redact(issue, session)
+  const visible = redact(issue, session)
+  if (visible.voiceNote && !isOfficer(session) && !ownsIssue(session, visible)) delete visible.voiceNote
+  return visible
 }
 
 export async function trackByRef(refNo: string, request: Request) {
@@ -185,15 +189,18 @@ export async function retriage(id: string, request: Request) {
     throw new HttpError(403, 'Your role cannot make this change')
   }
   if (!current.imageBase64) throw new HttpError(400, 'This ticket has no photo to analyse')
-  const result = await triage({ imageBase64: current.imageBase64, description: current.originalDescription, preferredLanguage: 'English', location: current.location })
+  const typed = current.originalDescription.startsWith('🎤 Voice complaint') ? '' : current.originalDescription
+  const result = await triage({ imageBase64: current.imageBase64, description: typed, preferredLanguage: 'English', location: current.location,
+    ...(current.voiceNote ? { audio: current.voiceNote } : {}) })
     .catch(() => { throw new HttpError(503, 'The AI service is still busy. Please try again in a minute.') })
-  const { title, translatedDescription, detectedLanguage, ...aiTriage } = result
+  const { title, translatedDescription, detectedLanguage, transcript, ...aiTriage } = result
   const saved = await mutateIssue(id, issue => {
     if (!issue) throw new HttpError(404, 'Issue not found')
     const at = new Date().toISOString()
     const move = issue.status === 'OPEN' && aiTriage.department !== issue.assignedDepartment
     return {
       ...issue, title, translatedDescription, detectedLanguage, aiTriage, aiPending: false, updatedAt: at,
+      ...(transcript && issue.originalDescription.startsWith('🎤 Voice complaint') ? { originalDescription: '🎤 ' + transcript } : {}),
       ...(move ? { assignedDepartment: aiTriage.department } : {}),
       audit: [...(issue.audit ?? []), { at, actor: session.email, action: `AI re-triage completed (severity ${aiTriage.severity}/5)` + (move ? ' · forwarded to ' + aiTriage.department : '') }].slice(-50),
     }

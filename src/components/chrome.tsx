@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, Award, Building2, ClipboardList, FileSearch, HelpCircle, Home, Landmark, LayoutDashboard, LogIn, LogOut, Megaphone, ScrollText, ShieldCheck, User } from 'lucide-react'
 import type { Notice } from '../lib/model'
 import { request } from './client'
+import { uiLanguages, type Lang } from './i18n'
 import { setFontSize, toggleContrast, usePortal } from './providers'
 
 export function UtilityBar() {
@@ -23,8 +24,12 @@ export function UtilityBar() {
         <span className="sep">|</span>
         <button onClick={toggleContrast} aria-label="Toggle high contrast">◐ Contrast</button>
         <span className="sep">|</span>
-        <button className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')} lang="en">English</button>
-        <button className={lang === 'hi' ? 'active' : ''} onClick={() => setLang('hi')} lang="hi">हिन्दी</button>
+        <label className="row" style={{ display: 'flex', gap: '.3rem', fontWeight: 500, fontSize: 'inherit', color: 'inherit' }}>
+          <span aria-hidden>🌐</span>
+          <select className="lang-select" value={lang} onChange={event => setLang(event.target.value as Lang)} aria-label={t('language')}>
+            {(Object.keys(uiLanguages) as Lang[]).map(code => <option key={code} value={code} lang={code}>{uiLanguages[code].native}</option>)}
+          </select>
+        </label>
       </div>
     </div>
   </div>
@@ -63,7 +68,7 @@ export function MainNav() {
     { href: '/dashboard', label: t('dashboard'), Icon: LayoutDashboard },
     { href: '/charter', label: t('charter'), Icon: ScrollText },
     { href: '/help', label: t('help'), Icon: HelpCircle },
-    ...(session?.demoEnabled ? [{ href: '/judges', label: 'For Judges', Icon: Award }] : []),
+    ...(session?.demoEnabled ? [{ href: '/judges', label: t('judges'), Icon: Award }] : []),
     ...(citizen ? [{ href: '/my', label: t('my'), Icon: User }] : []),
     ...(officer ? [{ href: '/admin', label: t('console'), Icon: Building2 }] : []),
   ]

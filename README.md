@@ -19,22 +19,47 @@
 | Leaders lack a situational picture | Gemini Commissioner brief: hotspots, systemic patterns, prioritised actions | Console → AI insights |
 | Citizens can't follow progress | Registration numbers, status timeline, officer remarks auto-translated, rating and reopen | `/track`, `/my` |
 | AI outages break the service | Model failover chain with timeouts; keyword routing + AI re-triage queue if all models fail | Console → AI insights → AI engine status |
+| Officers write vague or slow action reports | Gemini drafts action-taken remarks from the work order and target status, with placeholders for unknown facts | Console → case drawer → status update |
+| Citizens who cannot read or write are excluded | Gemini transcribes voice-note complaints and reads replies aloud in the citizen's language (API-ready; UI pending) | `POST /api/triage` with `audio`, `POST /api/speak` |
 
 **Google technologies:** Gemini API (`@google/genai`, structured output, multimodal), Firebase Authentication (Google sign-in), Cloud Firestore, Firebase App Hosting (Cloud Run + Secret Manager).
 
-**Security:** 3-tier RBAC enforced on every API route, signed HTTP-only sessions, captcha + OTP second factor + lockout for officers, citizen PII masked publicly. 21 automated tests (`npm test`).
+**Security:** 3-tier RBAC enforced on every API route, signed HTTP-only sessions, captcha + OTP second factor + lockout for officers, citizen PII masked publicly. 20 automated tests (`npm test`).
 
 CivicResolve routes multilingual infrastructure reports to municipal teams. Citizens can file reports and follow progress. Field staff work within their department, and the commissioner can reassign tickets or change priorities.
 
 ## What's in the portal
 
-**Citizens:** home page in the style of a government portal (tricolour band, accessibility bar with A-/A/A+, contrast and English/हिन्दी), a 3-step **Lodge Grievance** wizard with a printable acknowledgement slip and registration number (`AGR-YYYY-NNNNNN`), **Track Status**, **My Grievances** (mobile OTP sign-in), rating and reopening of disposed cases, a public dashboard with charts and a map, the citizen charter with the escalation matrix, FAQ, and **CivicResolve Sahayak**, a Gemini helpdesk assistant.
+**Citizens:** home page in the style of a government portal (tricolour band, accessibility bar with A-/A/A+, contrast and English/हिन्दी), a 3-step **Lodge Grievance** wizard with a printable acknowledgement slip and registration number (`AGR-YYYY-NNNNNN`), **Track Status**, **My Grievances** (mobile OTP sign-in), an **"I'm affected too"** button that publicly upvotes a grievance and raises its priority, rating and reopening of disposed cases, a public dashboard with charts and a map, the citizen charter with the escalation matrix, FAQ, and **CivicResolve Sahayak**, a Gemini helpdesk assistant.
 
-**Officers (`/admin`):** Overview (KPIs, AI daily brief, needs-attention list), Grievance Register (search, filters, sort, bulk forward/priority/remind, CSV export, case drawer), SLA & Escalations (L1/L2/L3 board), Map & Hotspots, AI Insights (Commissioner brief, AI engine status, AI re-triage queue), Department Performance (Commissioner only), Public Notices (Commissioner only; shown in the site ticker), and Audit Log.
+**Officers (`/admin`):** Overview (KPIs, AI daily brief, needs-attention list), Grievance Register (search, filters, sort, bulk forward/priority/remind, CSV export, case drawer with **AI-suggested action-taken remarks**), SLA & Escalations (L1/L2/L3 board), Map & Hotspots, AI Insights (Commissioner brief, AI engine status, AI re-triage queue), Department Performance (Commissioner only), Public Notices (Commissioner only; shown in the site ticker), and Audit Log.
 
 **Sign-in:** officers use User ID + password + server-rendered captcha, then a 6-digit OTP second factor. Accounts lock for 15 minutes after 5 failed attempts. Citizens use mobile OTP. Optional Google sign-in via Firebase Auth. Judge demo cards appear only when demo mode is on.
 
 **AI resilience:** every Gemini call goes through a model failover chain with per-attempt timeouts. Overloaded models are skipped for 2 minutes. If every model is down, reports are still accepted with keyword routing and flagged for AI re-triage, and the Commissioner brief and helpdesk fall back to rule-based answers.
+
+## AI features at a glance
+
+All AI runs on Gemini through the failover chain in [`src/lib/ai.ts`](src/lib/ai.ts), with structured JSON output validated by Zod.
+
+| Feature | What it does | Endpoint |
+| --- | --- | --- |
+| Multimodal triage | Reads photo + text (and an optional voice note), rejects spam, detects language, picks department, severity, confidence, SLA, cascading risk, English work order and a native-language acknowledgement | `POST /api/triage` |
+| Duplicate detection | Compares a new report against nearby open grievances (100 m) by photo and description; merges only the same physical hazard | `POST /api/triage` |
+| Resolution verification | Compares before and after photos; disposal is blocked unless the fix is visible | `PATCH /api/issues/[id]` |
+| Remark translation | Translates officer action-taken remarks into the citizen's language | `PATCH /api/issues/[id]` |
+| Remark suggestions | Drafts 1-3 sentences of formal action-taken remarks for an officer | `POST /api/issues/[id]/suggest` |
+| AI re-triage | Re-runs triage on tickets that were keyword-routed during an outage, including any saved voice note | `POST /api/issues/[id]/retriage` |
+| Escalation letters | Drafts a dated escalation/RTI-style letter in the citizen's language for overdue grievances | `POST /api/issues/[id]/escalation` |
+| Commissioner brief | Hotspots, systemic patterns, prioritised actions and risk watch over the live register | `GET /api/admin/insights` |
+| Sahayak helpdesk | Answers citizen questions in their language from the citizen charter and their ticket | `POST /api/assistant` |
+| AI engine status | Model chain, benched models, last call latency and failure counts | `GET /api/admin/health` |
+
+**API-ready, UI pending:** these work on the backend but the lodge page does not expose them yet.
+
+- **Voice-note complaints:** `POST /api/triage` accepts `audio` (WAV data URL, about 900 KB max) instead of or alongside a description. Gemini transcribes it verbatim, detects the language from the speech and stores the recording as evidence for re-triage. Built for citizens who cannot read or write.
+- **Read-aloud:** `POST /api/speak` with `{ text, language }` returns a WAV of Gemini text-to-speech in the citizen's language. Responses are cached in memory. Intended as a fallback when the browser has no built-in voice for the language.
+- **Picture category picker:** `POST /api/triage` accepts `category` (`road`, `garbage`, `drain`, `light`, `tree`), chosen by tapping a picture. Gemini treats it only as a hint, and keyword fallback uses it when the description gives no clue.
 
 ## Run locally
 
@@ -52,10 +77,14 @@ Open `http://localhost:3000`. Use **Load demo data** on the dashboard or console
 | `GEMINI_API_KEY` | Required for AI triage, verification, translation, brief and helpdesk |
 | `GEMINI_MODEL` | Primary model (default `gemini-3.8-flash`) |
 | `GEMINI_FALLBACK_MODELS` | Comma-separated failover chain (default `gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-3.5-flash`) |
+| `GEMINI_TTS_MODELS` | Comma-separated read-aloud models (default `gemini-3.8-flash-tts,gemini-2.5-flash-preview-tts`) |
 | `CIVIC_SESSION_SECRET` | 32+ character session signing secret (required in production) |
 | `CIVIC_PASSWORD_<ROLE>` | Officer passwords: `ADMIN`, `ROADS`, `SANITATION`, `WATER`, `ELECTRICAL`, `SAFETY` |
 | `CIVIC_DEMO_LOGIN` | `true` enables judge demo cards and on-screen demo OTPs in production |
 | `CIVIC_OTP_DISPLAY` | `true` shows OTPs on screen (simulated SMS gateway) without enabling demo cards |
+| `CIVIC_AUTO_SEED` | `true` loads the 16 demo grievances once per instance when the register is empty (on in the live deployment) |
+| `CIVIC_STORE` | `memory` forces the in-memory store even when Firestore credentials exist |
+| `FIRESTORE_EMULATOR_HOST` | Uses a local Firestore emulator instead of the cloud database |
 | `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_APP_ID` | Enables Google sign-in through Firebase Auth |
 | `CIVIC_GOOGLE_OFFICERS` | Maps Google emails to officer roles, e.g. `you@gmail.com=admin;eng@gmail.com=roads` |
 
