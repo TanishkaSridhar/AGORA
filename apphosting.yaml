@@ -13,3 +13,9 @@ env:
   - variable: CIVIC_SESSION_SECRET
     secret: CIVIC_SESSION_SECRET
     availability: [RUNTIME]
+  - variable: CIVIC_PASSWORD_ROADS
+    secret: CIVIC_DEMO_ROADS_PASSWORD
+    availability: [RUNTIME]
+  - variable: CIVIC_PASSWORD_SANITATION
+    secret: CIVIC_DEMO_SANITATION_PASSWORD
+    availability: [RUNTIME]
