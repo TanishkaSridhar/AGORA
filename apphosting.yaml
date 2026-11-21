@@ -30,8 +30,6 @@ env:
     availability: [ BUILD, RUNTIME ]
   - variable: CIVIC_GOOGLE_OFFICERS
     secret: CIVIC_GOOGLE_OFFICERS
-  - variable: CIVIC_GOOGLE_OFFICERS
-    secret: CIVIC_GOOGLE_OFFICERS
     availability: [RUNTIME]
   # Hackathon judging: one-click role access, on-screen demo OTPs, and sample data on an empty register.
   - variable: CIVIC_DEMO_LOGIN
