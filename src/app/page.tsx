@@ -79,7 +79,7 @@ export default function Home() {
   return <div className="grid split">
     <section className="intro">
       <h1>Report a local hazard.</h1>
-      <p>Send a photo and a description in your language. CivicResolve routes the report to the responsible municipal team.</p>
+      <p>Send a photo and a description in your language. AGORA routes the report to the responsible municipal team.</p>
       <ul className="flow"><li><Camera size={21}/> Photograph the issue</li><li><MapPin size={21}/> Add its location</li><li><Wrench size={21}/> Follow the repair on the dashboard</li></ul>
     </section>
     <div className="stack">

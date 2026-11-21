@@ -1,6 +1,6 @@
-# CivicResolve
+# AGORA
 
-CivicResolve routes multilingual infrastructure reports to municipal teams. Citizens can file reports and follow progress. Field staff work within their department, and the commissioner can reassign tickets or change priorities.
+AGORA routes multilingual infrastructure reports to municipal teams. Citizens can file reports and follow progress. Field staff work within their department, and the commissioner can reassign tickets or change priorities.
 
 ## Run locally
 
@@ -28,8 +28,8 @@ Production deployments have judge demo access disabled by default. For a dedicat
 For a standalone container:
 
 ```sh
-docker build -t civicresolve .
-docker run --rm -p 8080:8080 --env-file .env.local civicresolve
+docker build -t agora .
+docker run --rm -p 8080:8080 --env-file .env.local agora
 ```
 
 The container listens on port 8080. Supply the same runtime secrets and credentials on Cloud Run, which provides HTTPS for secure session cookies.
@@ -49,7 +49,7 @@ Run these commands from the application directory. Each step stages only its lis
 
 ```sh
 git add spec.MD .gitignore package.json package-lock.json tsconfig.json next.config.ts postcss.config.mjs tailwind.config.ts eslint.config.mjs src/lib src/app/api public/demo
-git commit -m "Build CivicResolve triage and municipal API"
+git commit -m "Build AGORA triage and municipal API"
 
 git add src/components src/app/layout.tsx src/app/globals.css src/app/page.tsx src/app/login src/app/dashboard src/app/issues
 git commit -m "Add citizen reporting and municipal dashboard"

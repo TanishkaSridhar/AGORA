@@ -11,7 +11,7 @@ export function route<T extends unknown[]>(handler: (...args: T) => Promise<Resp
     } catch (error) {
       if (error instanceof HttpError) return Response.json({ error: error.message }, { status: error.status })
       if (error instanceof z.ZodError) return Response.json({ error: error.issues.map(issue => issue.message).join('. ') }, { status: 400 })
-      console.error('CivicResolve request failed', error instanceof Error ? error.message : 'Unknown error')
+      console.error('AGORA request failed', error instanceof Error ? error.message : 'Unknown error')
       return Response.json({ error: 'The request could not be completed. Please try again.' }, { status: 500 })
     }
   }

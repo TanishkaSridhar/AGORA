@@ -123,7 +123,7 @@ export default function Dashboard() {
           await request('/api/auth/logout', 'POST')
           setSession(await request<Session>('/api/auth/session')); setDepartment(''); await refresh()
         })}>Log out</button>}</div>
-    </div><h1>Civic command dashboard</h1></header>
+    </div><h1>AGORA dashboard</h1></header>
     {error && <p role="alert" className="alert error">{error}</p>}
     <section className="grid kpis" aria-label="Report statistics">{metrics.map(([label, value]) => <div className="card kpi" key={label}><strong>{value}</strong><span className="muted small">{label}</span></div>)}</section>
     <div className="card row justify-between">
