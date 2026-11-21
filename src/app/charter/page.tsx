@@ -16,7 +16,7 @@ const services = [
 export default function Charter() {
   return <div className="stack">
     <Breadcrumb items={[['Home', '/'], ['Citizen Charter']]} />
-    <div className="page-head"><div><h1>Citizen charter</h1><p>What AGORA handles, how quickly departments are expected to act, and how grievances are escalated when they are not.</p></div></div>
+    <div className="page-head"><div><h1>Citizen charter</h1><p>What CivicResolve handles, how quickly departments are expected to act, and how grievances are escalated when they are not.</p></div></div>
     <Panel title="Service standards">
       <div className="table-wrap"><table className="data">
         <thead><tr><th>Code</th><th>Department</th><th>Typical grievances</th><th>Indicative service level*</th></tr></thead>

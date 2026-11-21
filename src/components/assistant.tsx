@@ -7,10 +7,10 @@ import { message, request } from './client'
 type Turn = { role: 'user' | 'model'; text: string }
 const starters = ['How do I lodge a grievance?', 'What happens after the SLA is breached?', 'मेरी शिकायत की स्थिति कैसे देखें?']
 
-/** AGORA Sahayak: Gemini-powered helpdesk, grounded on the citizen charter and live ticket status. */
+/** CivicResolve Sahayak: Gemini-powered helpdesk, grounded on the citizen charter and live ticket status. */
 export default function Assistant() {
   const [open, setOpen] = useState(false)
-  const [turns, setTurns] = useState<Turn[]>([{ role: 'model', text: 'Namaste! I am AGORA Sahayak. Ask me how to lodge or track a grievance, in any language. Include your registration number (AGR-YYYY-NNNNNN) for a status update.' }])
+  const [turns, setTurns] = useState<Turn[]>([{ role: 'model', text: 'Namaste! I am CivicResolve Sahayak. Ask me how to lodge or track a grievance, in any language. Include your registration number (AGR-YYYY-NNNNNN) for a status update.' }])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const log = useRef<HTMLDivElement>(null)
@@ -31,9 +31,9 @@ export default function Assistant() {
   }
 
   return <>
-    {open && <section className="chat" aria-label="AGORA Sahayak assistant">
+    {open && <section className="chat" aria-label="CivicResolve Sahayak assistant">
       <div className="chat-head">
-        <div className="row" style={{ gap: '.5rem' }}><Bot size={22} /><div><strong>AGORA Sahayak</strong><span>AI helpdesk · Gemini</span></div></div>
+        <div className="row" style={{ gap: '.5rem' }}><Bot size={22} /><div><strong>CivicResolve Sahayak</strong><span>AI helpdesk · Gemini</span></div></div>
         <button className="btn-sm" style={{ background: 'transparent', borderColor: '#ffffff55' }} onClick={() => setOpen(false)} aria-label="Close assistant"><X size={16} /></button>
       </div>
       <div className="chat-log" ref={log} aria-live="polite">

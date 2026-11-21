@@ -24,7 +24,7 @@ export default function Home() {
   const recent = (issues ?? []).filter(issue => issue.status === 'RESOLVED').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 4)
 
   return <div className="stack" style={{ gap: '1.25rem' }}>
-    {session?.demoEnabled && <div className="alert alert-info"><Award size={18} /><div><strong>Evaluating AGORA?</strong> The <Link href="/judges">evaluator guide</Link> has one-click Commissioner / Officer access (no password) and a five-minute walkthrough of every AI feature.</div></div>}
+    {session?.demoEnabled && <div className="alert alert-info"><Award size={18} /><div><strong>Evaluating CivicResolve?</strong> The <Link href="/judges">evaluator guide</Link> has one-click Commissioner / Officer access (no password) and a five-minute walkthrough of every AI feature.</div></div>}
     <section className="hero">
       <div className="hero-body">
         <span className="badge" style={{ background: '#ffffff1a', color: '#fff', borderColor: '#ffffff33', justifySelf: 'start' }}><ShieldCheck size={13} />Swift · Transparent · Accountable</span>
@@ -87,7 +87,7 @@ export default function Home() {
             {notices.slice(0, 4).map(notice => <li key={notice.id}><span>{notice.kind === 'alert' ? '⚠ ' : ''}{notice.text}<span className="new-tag">NEW</span></span><span className="tiny muted">{dateLabel(notice.createdAt)} · {notice.author}</span></li>)}
             <li><span><Languages size={14} style={{ display: 'inline', verticalAlign: -2 }} /> Grievances accepted in 8 Indian languages, with voice input.</span></li>
             <li><span><BadgeCheck size={14} style={{ display: 'inline', verticalAlign: -2 }} /> AI before/after verification is mandatory for every disposal.</span></li>
-            <li><span>Ask <strong>AGORA Sahayak</strong> (bottom right) for help in any language.</span></li>
+            <li><span>Ask <strong>CivicResolve Sahayak</strong> (bottom right) for help in any language.</span></li>
           </ul>
         </Panel>
         <Panel title="Recently disposed">

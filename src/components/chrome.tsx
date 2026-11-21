@@ -34,11 +34,11 @@ export function Masthead() {
   const { t } = usePortal()
   return <header className="masthead">
     <div className="shell">
-      <Link href="/" className="brandmark" aria-label="AGORA home">
+      <Link href="/" className="brandmark" aria-label="CivicResolve home">
         <span className="emblem" aria-hidden><Landmark size={28} /></span>
         <span className="brand-text">
           <small>{t('corp')}</small>
-          <strong>AGORA · {t('portal')}</strong>
+          <strong>CivicResolve · {t('portal')}</strong>
           <span lang="hi">नागरिक शिकायत निवारण पोर्टल · Report · Track · Resolve</span>
         </span>
       </Link>
@@ -113,7 +113,7 @@ export function Ticker() {
 export function Footer() {
   return <footer className="footer">
     <div className="shell cols">
-      <div><h4>About AGORA</h4><p>An AI-assisted public grievance redressal system that routes citizen reports to municipal departments, tracks SLAs and verifies every fix.</p></div>
+      <div><h4>About CivicResolve</h4><p>An AI-assisted public grievance redressal system that routes citizen reports to municipal departments, tracks SLAs and verifies every fix.</p></div>
       <div><h4>Citizen services</h4><ul>
         <li><Link href="/lodge">Lodge a grievance</Link></li><li><Link href="/track">Track grievance status</Link></li>
         <li><Link href="/dashboard">Public dashboard</Link></li><li><Link href="/my">My grievances</Link></li></ul></div>
@@ -125,7 +125,7 @@ export function Footer() {
         <li><Link href="/help#privacy">Privacy & data policy</Link></li></ul></div>
     </div>
     <div className="shell footer-bottom">
-      <span>AGORA · prototype built for the GDG Hackathon · Not an official government website.</span>
+      <span>CivicResolve · prototype built for the GDG Hackathon · Not an official government website.</span>
       <span>Powered by Google Gemini · Firebase · Cloud Run</span>
     </div>
   </footer>

@@ -24,6 +24,6 @@ export const GET = route(async (request: Request) => {
   const csv = '﻿' + [header, ...rows].map(row => row.map(cell).join(',')).join('\r\n')
   return new Response(csv, { headers: {
     'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': 'no-store',
-    'Content-Disposition': `attachment; filename="agora-grievances-${new Date().toISOString().slice(0, 10)}.csv"`,
+    'Content-Disposition': `attachment; filename="civicresolve-grievances-${new Date().toISOString().slice(0, 10)}.csv"`,
   } })
 })

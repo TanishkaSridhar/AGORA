@@ -17,7 +17,7 @@ const faqs: [string, string][] = [
 export default function Help() {
   return <div className="stack">
     <Breadcrumb items={[['Home', '/'], ['Help & FAQ']]} />
-    <div className="page-head"><div><h1>Help & frequently asked questions</h1><p>Can&apos;t find an answer? Ask <strong>AGORA Sahayak</strong>, the AI helpdesk at the bottom right, in any language.</p></div></div>
+    <div className="page-head"><div><h1>Help & frequently asked questions</h1><p>Can&apos;t find an answer? Ask <strong>CivicResolve Sahayak</strong>, the AI helpdesk at the bottom right, in any language.</p></div></div>
     <div className="grid side-main">
       <Panel title="FAQs"><div className="faq stack-sm">
         {faqs.map(([question, answer]) => <details key={question}><summary>{question}</summary><div>{answer}</div></details>)}

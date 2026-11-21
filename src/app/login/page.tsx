@@ -51,7 +51,7 @@ function OfficerLogin() {
 
   if (otp) return <form className="stack" onSubmit={event => { event.preventDefault(); void login({ challenge: otp.challenge, otp: code }) }}>
     <div className="alert alert-info"><ShieldCheck size={18} /><div><strong>Two-step verification.</strong> Enter the OTP sent to {otp.maskedTo}.</div></div>
-    {otp.demoOtp && <div className="demo-sms" role="status"><div className="tiny muted">Demo SMS gateway</div>AGORA officer login OTP: <strong>{otp.demoOtp}</strong>. Valid 5 minutes. Never share this code.</div>}
+    {otp.demoOtp && <div className="demo-sms" role="status"><div className="tiny muted">Demo SMS gateway</div>CivicResolve officer login OTP: <strong>{otp.demoOtp}</strong>. Valid 5 minutes. Never share this code.</div>}
     <label>One-time password<input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ''))} className="mono" style={{ letterSpacing: '.4em', fontSize: '1.1rem' }} autoFocus /></label>
     {error && <p role="alert" className="alert alert-danger">{error}</p>}
     <div className="row between"><button type="button" className="btn-link" onClick={() => { setOtp(undefined); setError(''); reload() }}>← Back</button>

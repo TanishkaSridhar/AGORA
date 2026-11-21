@@ -36,7 +36,7 @@ export default function Judges() {
   return <div className="stack">
     <Breadcrumb items={[['Home', '/'], ['For judges']]} />
     <div className="page-head"><div><h1>Evaluator guide</h1>
-      <p>AGORA is an AI-powered, multilingual public grievance redressal portal for Indian municipalities, built on Google Gemini and Firebase. Everything below works on this live deployment; no account or password is needed.</p></div></div>
+      <p>CivicResolve is an AI-powered, multilingual public grievance redressal portal for Indian municipalities, built on Google Gemini and Firebase. Everything below works on this live deployment; no account or password is needed.</p></div></div>
 
     <Panel title="1 · One-click access (no password)">
       {session && !session.demoEnabled && <p className="alert alert-warn">Demo access is disabled on this deployment.</p>}
@@ -88,7 +88,7 @@ export default function Judges() {
         ].map(({ Icon, name, text }) => <div key={name} className="row" style={{ alignItems: 'flex-start', flexWrap: 'nowrap' }}>
           <span className="tile-icon" style={{ flex: 'none' }}><Icon size={20} /></span><div><strong className="small">{name}</strong><p className="tiny muted">{text}</p></div></div>)}
       </div>
-      <p className="tiny muted"><Building2 size={12} style={{ display: 'inline' }} /> Sample grievances are synthetic demo data. AGORA is a hackathon prototype, not an official government website.</p>
+      <p className="tiny muted"><Building2 size={12} style={{ display: 'inline' }} /> Sample grievances are synthetic demo data. CivicResolve is a hackathon prototype, not an official government website.</p>
     </Panel>
   </div>
 }

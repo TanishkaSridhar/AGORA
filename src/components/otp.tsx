@@ -58,7 +58,7 @@ export function MobileOtp({ onVerified, initialMobile = '', compact = false }: {
     {sent && <>
       {sent.demoOtp && <div className="demo-sms" role="status">
         <div className="tiny muted">Demo SMS gateway · message to {sent.maskedTo}</div>
-        Your AGORA verification code is <strong>{sent.demoOtp}</strong>. Valid for 5 minutes. Do not share it with anyone.
+        Your CivicResolve verification code is <strong>{sent.demoOtp}</strong>. Valid for 5 minutes. Do not share it with anyone.
       </div>}
       <label>Enter 6-digit OTP
         <div className="row" style={{ flexWrap: 'nowrap' }}>

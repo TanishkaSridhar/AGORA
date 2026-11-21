@@ -62,12 +62,12 @@ export function StatusTrack({ status }: { status: IssueStatus }) {
 }
 
 export function Timeline({ issue, native = true }: { issue: IssueSummary; native?: boolean }) {
-  const entries = issue.audit?.length ? issue.audit : [{ at: issue.createdAt, actor: 'AGORA', action: 'Grievance received' }]
+  const entries = issue.audit?.length ? issue.audit : [{ at: issue.createdAt, actor: 'CivicResolve', action: 'Grievance received' }]
   return <ol className="timeline">
     {[...entries].reverse().map((entry, index) => {
       const tone = /Disposed|verified|rated (4|5)/i.test(entry.action) ? 'ok' : /rejected|Reopened|rated (1|2)/i.test(entry.action) ? 'bad' : /Reminder|Escalat|keyword/i.test(entry.action) ? 'warn' : ''
       return <li key={index} className={tone}>
-        <div className="when">{dateLabel(entry.at)} · {entry.actor}</div>
+        <div className="when">{dateLabel(entry.at)} · {entry.actor.replace(/^AGORA(?= AI$|$)/, 'CivicResolve')}</div>
         <div className="what">{entry.action}</div>
         {entry.remarks && <div className="remarks"><strong className="tiny">Remarks: </strong>{entry.remarks}
           {native && entry.remarksNative && <div dir="auto" style={{ marginTop: 4 }} className="muted">{entry.remarksNative}</div>}</div>}

@@ -32,7 +32,7 @@ export default function Dashboard() {
 
   return <div className="stack">
     <Breadcrumb items={[['Home', '/'], ['Public Dashboard']]} />
-    <div className="page-head"><div><h1>Public grievance dashboard</h1><p>Live, open data on grievances received, pending and disposed across municipal departments. Citizen contact details are never shown publicly.</p></div>
+    <div className="page-head"><div><h1>CivicResolve dashboard</h1><p>Live, open data on grievances received, pending and disposed across municipal departments. Citizen contact details are never shown publicly.</p></div>
       <div className="row">
         <button className="btn-ghost" disabled={busy} onClick={async () => { setBusy(true); await load(); setBusy(false) }}><RefreshCw size={15} />Refresh</button>
         {session?.demoEnabled && session.role !== 'DEPT_STAFF' && <button className="btn-ghost" disabled={busy} onClick={async () => {

@@ -9,7 +9,7 @@ import { Providers } from '../components/providers'
 const sans = Noto_Sans({ subsets: ['latin', 'devanagari'], weight: ['400', '500', '600', '700', '800'], variable: '--font-sans', display: 'swap' })
 
 export const metadata: Metadata = {
-  title: { default: 'AGORA · Citizen Grievance Redressal Portal', template: '%s · AGORA' },
+  title: { default: 'CivicResolve · Citizen Grievance Redressal Portal', template: '%s · CivicResolve' },
   description: 'Lodge, track and resolve municipal grievances in your language. AI-assisted routing, SLA tracking and verified resolutions.',
 }
 

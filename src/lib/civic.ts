@@ -36,7 +36,7 @@ export async function submitReport(input: unknown, session: AuthSession = { name
     ...(aiPending ? { aiPending: true } : {}), ...(citizen ? { citizen } : {}),
     status: 'OPEN', assignedDepartment: aiTriage.department, upvotes: 0, duplicateMergeCount: 0,
     createdAt: now.toISOString(), updatedAt: now.toISOString(),
-    audit: [{ at: now.toISOString(), actor: 'AGORA AI', action: aiPending
+    audit: [{ at: now.toISOString(), actor: 'CivicResolve AI', action: aiPending
       ? 'Received · routed by keyword rules (AI busy) to ' + aiTriage.department
       : `Received · AI triaged (severity ${aiTriage.severity}/5, ${Math.round(aiTriage.confidence * 100)}% confidence) and forwarded to ${aiTriage.department}` }],
   }

@@ -1,7 +1,7 @@
-# AGORA — AI-Powered Multilingual Civic Triage & Resolution Platform (`SPEC.md`)
+# CivicResolve — AI-Powered Multilingual Civic Triage & Resolution Platform (`SPEC.md`)
 
 ## 1. Project Overview
-**AGORA** is a mobile-first, AI-powered civic reporting and municipal governance platform built for the GDG Hackathon. Citizens report infrastructure problems via photo, voice/text in **any Indian regional language (Tamil, Hindi, Telugu, Kannada, Malayalam, Bengali, Marathi, English)**, and GPS coordinates. Google Gemini Multimodal AI (`gemini-3.8-flash`) analyzes the visual hazard, translates regional citizen complaints into formal English engineering work orders while replying to the citizen in their native language, detects **geo-spatial + semantic duplicates** within 100 meters to auto-upvote existing tickets, verifies **"Before vs. After" resolution photos** using AI visual comparison, predicts cascading infrastructure risks, and enforces **3-Tier Role-Based Access Control (RBAC)** across public citizens, department field engineers, and the Municipal Commissioner.
+**CivicResolve** is a mobile-first, AI-powered civic reporting and municipal governance platform built for the GDG Hackathon. Citizens report infrastructure problems via photo, voice/text in **any Indian regional language (Tamil, Hindi, Telugu, Kannada, Malayalam, Bengali, Marathi, English)**, and GPS coordinates. Google Gemini Multimodal AI (`gemini-3.8-flash`) analyzes the visual hazard, translates regional citizen complaints into formal English engineering work orders while replying to the citizen in their native language, detects **geo-spatial + semantic duplicates** within 100 meters to auto-upvote existing tickets, verifies **"Before vs. After" resolution photos** using AI visual comparison, predicts cascading infrastructure risks, and enforces **3-Tier Role-Based Access Control (RBAC)** across public citizens, department field engineers, and the Municipal Commissioner.
 
 ## 2. Tech Stack & Deployment Architecture
 - **Framework:** Next.js 15 (App Router, TypeScript, React 19, Tailwind CSS, Lucide Icons)
@@ -18,7 +18,7 @@
    - Gemini detects the input language, translates the issue into a standardized **English Municipal Engineering Work Order**, and generates a **Citizen Acknowledgement & Safety Advisory in the citizen's exact native language**.
 2. **Geo-Spatial + AI Semantic Duplicate Remover (`100m` Haversine + Visual Match)**
    - Before creating a new ticket, the backend queries open issues within a **100-meter radius** (Haversine distance on `lat`/`lng` or matching normalized ward/landmark strings) in the same department.
-   - Gemini compares the newly uploaded photo + description against nearby open issues. If it matches an existing problem, AGORA **merges the report**, increments `upvotes` (boosting priority), appends the photo as corroborating evidence, and notifies the user: *"Merged with existing nearby report #ID — priority boosted!"*
+   - Gemini compares the newly uploaded photo + description against nearby open issues. If it matches an existing problem, CivicResolve **merges the report**, increments `upvotes` (boosting priority), appends the photo as corroborating evidence, and notifies the user: *"Merged with existing nearby report #ID — priority boosted!"*
 3. **AI Visual Proof-of-Resolution Verifier ("Before vs. After" Audit)**
    - When marking an issue `RESOLVED`, department field staff or admins upload a completion photo.
    - Gemini visually compares the original **Before** photo with the **After** photo to verify whether the hazard is genuinely fixed, outputting `resolutionVerified: boolean` and a `verificationNotes` badge (`AI Verified Fix`) to prevent fake/premature ticket closures.

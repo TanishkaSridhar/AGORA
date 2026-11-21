@@ -40,7 +40,7 @@ export async function seedIssues() {
     const created = Date.now() - example.ageHours * 3_600_000
     const at = (hours: number) => new Date(created + hours * 3_600_000).toISOString()
     const department = departments[example.department]
-    const audit: AuditEntry[] = [{ at: at(0), actor: 'AGORA AI', action: `Received · AI triaged (severity ${example.severity}/5, 92% confidence) and forwarded to ${department}` }]
+    const audit: AuditEntry[] = [{ at: at(0), actor: 'CivicResolve AI', action: `Received · AI triaged (severity ${example.severity}/5, 92% confidence) and forwarded to ${department}` }]
     if (example.status !== 'OPEN') {
       if (example.officer) audit.push({ at: at(2), actor: 'admin@civicresolve.gov', action: 'Assigned to ' + example.officer })
       audit.push({ at: at(3), actor: 'Field staff (demo)', action: 'Status → Action in progress', remarks: 'Site inspected; crew deployed. (Demo record)' })

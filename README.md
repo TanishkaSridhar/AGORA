@@ -1,4 +1,4 @@
-# AGORA
+# CivicResolve
 
 **AI-powered multilingual citizen grievance redressal portal for Indian municipalities, built with Google Gemini and Firebase.**
 
@@ -10,7 +10,7 @@
 - **Officer console:** `/admin` → Overview, Grievance register, SLA & escalations, Map, AI insights, Department performance, Public notices, Audit log.
 - The live register is pre-loaded with 16 synthetic grievances in 8 languages. Demo OTPs are shown on screen.
 
-| Problem | How AGORA solves it | Where to see it |
+| Problem | How CivicResolve solves it | Where to see it |
 | --- | --- | --- |
 | Complaints are in many languages and reach the wrong office | Gemini multimodal triage reads photo + text in 8 languages, routes to 1 of 5 departments, sets severity, SLA and an English work order, and replies in the citizen's language | `/lodge` → acknowledgement slip |
 | Duplicate complaints flood departments | 100 m geo radius + Gemini visual match merges duplicates and boosts priority | "+N merged" badges in the register |
@@ -24,11 +24,11 @@
 
 **Security:** 3-tier RBAC enforced on every API route, signed HTTP-only sessions, captcha + OTP second factor + lockout for officers, citizen PII masked publicly. 21 automated tests (`npm test`).
 
-AGORA routes multilingual infrastructure reports to municipal teams. Citizens can file reports and follow progress. Field staff work within their department, and the commissioner can reassign tickets or change priorities.
+CivicResolve routes multilingual infrastructure reports to municipal teams. Citizens can file reports and follow progress. Field staff work within their department, and the commissioner can reassign tickets or change priorities.
 
 ## What's in the portal
 
-**Citizens:** home page in the style of a government portal (tricolour band, accessibility bar with A-/A/A+, contrast and English/हिन्दी), a 3-step **Lodge Grievance** wizard with a printable acknowledgement slip and registration number (`AGR-YYYY-NNNNNN`), **Track Status**, **My Grievances** (mobile OTP sign-in), rating and reopening of disposed cases, a public dashboard with charts and a map, the citizen charter with the escalation matrix, FAQ, and **AGORA Sahayak**, a Gemini helpdesk assistant.
+**Citizens:** home page in the style of a government portal (tricolour band, accessibility bar with A-/A/A+, contrast and English/हिन्दी), a 3-step **Lodge Grievance** wizard with a printable acknowledgement slip and registration number (`AGR-YYYY-NNNNNN`), **Track Status**, **My Grievances** (mobile OTP sign-in), rating and reopening of disposed cases, a public dashboard with charts and a map, the citizen charter with the escalation matrix, FAQ, and **CivicResolve Sahayak**, a Gemini helpdesk assistant.
 
 **Officers (`/admin`):** Overview (KPIs, AI daily brief, needs-attention list), Grievance Register (search, filters, sort, bulk forward/priority/remind, CSV export, case drawer), SLA & Escalations (L1/L2/L3 board), Map & Hotspots, AI Insights (Commissioner brief, AI engine status, AI re-triage queue), Department Performance (Commissioner only), Public Notices (Commissioner only; shown in the site ticker), and Audit Log.
 
@@ -70,8 +70,8 @@ Production deployments have judge demo access disabled by default. For a dedicat
 For a standalone container:
 
 ```sh
-docker build -t agora .
-docker run --rm -p 8080:8080 --env-file .env.local agora
+docker build -t civicresolve .
+docker run --rm -p 8080:8080 --env-file .env.local civicresolve
 ```
 
 The container listens on port 8080. Supply the same runtime secrets and credentials on Cloud Run, which provides HTTPS for secure session cookies.
