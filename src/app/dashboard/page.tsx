@@ -1,143 +1,89 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { useEffect, useState, type FormEvent } from 'react'
-import { AlertTriangle, BadgeCheck, Clock, LockKeyhole, MapPin, ThumbsUp } from 'lucide-react'
-import Escalation from '../../components/escalation'
-import { compress, dateLabel, message, request } from '../../components/client'
-import { departments, isOverdue, statuses, type AuthSession, type IssueSummary } from '../../lib/model'
+import { useEffect, useMemo, useState } from 'react'
+import { Download, RefreshCw } from 'lucide-react'
+import { RankedBars, StackedBars, TrendLines, statusSeries } from '../../components/charts'
+import { dateLabel, dayLabel, message, request } from '../../components/client'
+import { usePortal } from '../../components/providers'
+import { Breadcrumb, Empty, Flags, Panel, Severity, SlaBadge, StatusBadge } from '../../components/ui'
+import { departments, statusNames, statuses, type IssueSummary } from '../../lib/model'
+import { byDepartment, dailyTrend, hoursLabel, percent, shortDept, stats } from '../../lib/stats'
 
-type Session = AuthSession & { demoEnabled: boolean }
-const statusNames = { OPEN: 'Open', IN_PROGRESS: 'In progress', RESOLVED: 'Resolved' }
-
-function Ticket({ issue, session, refresh }: { issue: IssueSummary; session: Session; refresh: () => Promise<void> }) {
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [voted, setVoted] = useState(false)
-  const admin = session.role === 'SUPER_ADMIN'
-  const edit = admin || session.role === 'DEPT_STAFF' && session.department === issue.assignedDepartment
-  const path = '/api/issues/' + issue.id
-
-  async function perform(action: () => Promise<unknown>) {
-    setBusy(true); setError('')
-    try { await action(); await refresh() }
-    catch (error) { setError(message(error)) }
-    finally { setBusy(false) }
-  }
-
-  function override(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    void perform(() => request(path, 'PATCH', {
-      assignedDepartment: data.get('department'), severity: Number(data.get('severity')), estimatedSlaHours: Number(data.get('sla')),
-    }))
-  }
-
-  function resolve(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    const file = data.get('after')
-    if (!(file instanceof File) || !file.size) return
-    void perform(async () => request(path, 'PATCH', { status: 'RESOLVED', resolutionImageBase64: await compress(file) }))
-  }
-
-  return <article className={'card ticket stack' + (issue.aiTriage.severity >= 4 ? ' high' : '')}>
-    <div className="row justify-between">
-      <span className="badge">{statusNames[issue.status]}</span>
-      <span className="small muted">{issue.assignedDepartment}</span>
-    </div>
-    <div><h3><Link href={'/issues/' + issue.id}>{issue.title}</Link></h3>
-      <p className="row muted small"><MapPin size={15}/>{issue.location.address} <span>· {dateLabel(issue.createdAt)}</span></p></div>
-    <p>{issue.aiTriage.hazardSummary}</p>
-    <div className="row small">
-      <span className="badge">Severity {issue.aiTriage.severity}/5</span>
-      <span className="row"><Clock size={16}/>{issue.aiTriage.estimatedSlaHours}h SLA</span>
-      {isOverdue(issue) && <span className="badge">SLA breached</span>}
-      {issue.resolutionVerification?.verified && <span className="badge"><BadgeCheck size={16}/>AI Verified Fix</span>}
-    </div>
-    {issue.aiTriage.cascadingRiskAlert && <p className="alert"><AlertTriangle className="inline mr-2" size={17}/>{issue.aiTriage.cascadingRiskAlert}</p>}
-    {issue.resolutionVerification && !issue.resolutionVerification.verified && <p className="alert">After photo requires another review. {issue.resolutionVerification.notes}</p>}
-    <div className="row">
-      <button className="secondary" disabled={busy || voted} onClick={() => void perform(async () => { await request(path, 'PATCH', { upvote: true }); setVoted(true) })}><ThumbsUp size={16}/>{issue.upvotes} {voted ? '· Voted' : '· Upvote'}</button>
-      {isOverdue(issue) && <Escalation id={issue.id} preferred={issue.detectedLanguage}/>}
-      {edit && issue.status === 'OPEN' && <button disabled={busy} onClick={() => void perform(() => request(path, 'PATCH', { status: 'IN_PROGRESS' }))}>Start work</button>}
-      {!edit && session.role === 'DEPT_STAFF' && <span className="badge"><LockKeyhole size={15}/>Department restricted</span>}
-    </div>
-    {edit && issue.status === 'IN_PROGRESS' && <form className="stack" onSubmit={resolve}>
-      <label>After photo<input type="file" name="after" accept="image/*" capture="environment" required/></label>
-      <button disabled={busy}>{busy ? 'Working…' : 'Verify and resolve'}</button>
-    </form>}
-    {admin && <form className="grid two" onSubmit={override} key={issue.assignedDepartment + issue.aiTriage.severity + ':' + issue.aiTriage.estimatedSlaHours}>
-      <label>Reassign department<select name="department" defaultValue={issue.assignedDepartment}>{departments.map(item => <option key={item}>{item}</option>)}</select></label>
-      <label>Override severity<input name="severity" type="number" min={1} max={5} required defaultValue={issue.aiTriage.severity}/></label>
-      <label>Response SLA (hours)<input name="sla" type="number" min={1} max={8760} required defaultValue={issue.aiTriage.estimatedSlaHours}/></label>
-      <button className="self-end" disabled={busy}>Save priorities</button>
-    </form>}
-    {error && <p role="alert" className="alert error">{error}</p>}
-  </article>
-}
+const GrievanceMap = dynamic(() => import('../../components/map'), { ssr: false, loading: () => <p className="muted small">Loading map…</p> })
 
 export default function Dashboard() {
-  const [session, setSession] = useState<Session>()
-  const [issues, setIssues] = useState<IssueSummary[]>([])
+  const { session } = usePortal()
+  const [issues, setIssues] = useState<IssueSummary[]>()
+  const [error, setError] = useState('')
   const [department, setDepartment] = useState('')
   const [status, setStatus] = useState('')
-  const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
   const [busy, setBusy] = useState(false)
-  async function refresh() { setIssues(await request<IssueSummary[]>('/api/issues')) }
-  useEffect(() => {
-    Promise.all([request<Session>('/api/auth/session'), request<IssueSummary[]>('/api/issues')])
-      .then(([user, tickets]) => { setSession(user); setIssues(tickets) }).catch(error => setError(message(error)))
-  }, [])
+  const load = () => request<IssueSummary[]>('/api/issues').then(setIssues).catch(error => setError(message(error)))
+  useEffect(() => { void load() }, [])
 
-  async function perform(action: () => Promise<void>) {
-    setBusy(true); setError('')
-    try { await action() } catch (error) { setError(message(error)) } finally { setBusy(false) }
-  }
-
-  useEffect(() => {
-    if (!session) return
-    let active = true
-    const interval = window.setInterval(() => {
-      if (document.visibilityState !== 'visible') return
-      request<IssueSummary[]>('/api/issues')
-        .then(tickets => { if (active) setIssues(tickets) })
-        .catch(() => { /* The manual refresh reports request errors. */ })
-    }, 30_000)
-    return () => { active = false; window.clearInterval(interval) }
-  }, [session])
-
-  const filtered = issues.filter(issue => (!department || issue.assignedDepartment === department) && (!status || issue.status === status))
-  const metrics: [string, number][] = [
-    ['Total civic reports', issues.reduce((sum, issue) => sum + 1 + issue.duplicateMergeCount, 0)],
-    ['Duplicates prevented', issues.reduce((sum, issue) => sum + issue.duplicateMergeCount, 0)],
-    ['High / critical open hazards', issues.filter(issue => issue.status !== 'RESOLVED' && issue.aiTriage.severity >= 4).length],
-    ['AI-verified resolutions', issues.filter(issue => issue.resolutionVerification?.verified && issue.status === 'RESOLVED').length],
-  ]
+  const s = issues && stats(issues)
+  const depts = useMemo(() => issues ? byDepartment(issues) : [], [issues])
+  const trend = useMemo(() => issues ? dailyTrend(issues) : [], [issues])
+  const filtered = (issues ?? []).filter(issue => (!department || issue.assignedDepartment === department) && (!status || issue.status === status)
+    && (!query || (issue.title + issue.location.address + (issue.refNo ?? '') + (issue.location.ward ?? '')).toLowerCase().includes(query.toLowerCase())))
 
   return <div className="stack">
-    <header className="stack"><div className="row justify-between">
-      <span className="badge">{session?.role === 'SUPER_ADMIN' ? 'Super Admin · Municipal Commissioner' : session?.role === 'DEPT_STAFF' ? 'Department Staff · ' + session.department : 'Public Citizen View'}</span>
-      <div className="row"><Link href="/login" className="underline">{session?.role && session.role !== 'CITIZEN' ? 'Switch role' : 'Staff sign-in'}</Link>
-        {session && session.role !== 'CITIZEN' && <button className="secondary" disabled={busy} onClick={() => void perform(async () => {
-          await request('/api/auth/logout', 'POST')
-          setSession(await request<Session>('/api/auth/session')); setDepartment(''); await refresh()
-        })}>Log out</button>}</div>
-    </div><h1>AGORA dashboard</h1></header>
-    {error && <p role="alert" className="alert error">{error}</p>}
-    <section className="grid kpis" aria-label="Report statistics">{metrics.map(([label, value]) => <div className="card kpi" key={label}><strong>{value}</strong><span className="muted small">{label}</span></div>)}</section>
-    <div className="card row justify-between">
+    <Breadcrumb items={[['Home', '/'], ['Public Dashboard']]} />
+    <div className="page-head"><div><h1>Public grievance dashboard</h1><p>Live, open data on grievances received, pending and disposed across municipal departments. Citizen contact details are never shown publicly.</p></div>
       <div className="row">
-        {session?.role !== 'DEPT_STAFF' && <label className="small">Department<select value={department} onChange={event => setDepartment(event.target.value)}><option value="">All departments</option>{departments.map(item => <option key={item}>{item}</option>)}</select></label>}
-        <label className="small">Status<select value={status} onChange={event => setStatus(event.target.value)}><option value="">All statuses</option>{statuses.map(item => <option value={item} key={item}>{statusNames[item]}</option>)}</select></label>
-      </div>
-      <div className="row">
-        <button className="secondary" disabled={busy} onClick={() => void perform(refresh)}>Refresh</button>
-        {session?.demoEnabled && session.role !== 'DEPT_STAFF' && <button className="secondary" disabled={busy} onClick={() => void perform(async () => { await request('/api/issues/seed', 'POST'); await refresh() })}>Load demo reports</button>}
+        <button className="btn-ghost" disabled={busy} onClick={async () => { setBusy(true); await load(); setBusy(false) }}><RefreshCw size={15} />Refresh</button>
+        {session?.demoEnabled && session.role !== 'DEPT_STAFF' && <button className="btn-ghost" disabled={busy} onClick={async () => {
+          setBusy(true); try { await request('/api/issues/seed', 'POST'); await load() } catch (error) { setError(message(error)) } finally { setBusy(false) }
+        }}><Download size={15} />Load demo data</button>}
       </div>
     </div>
-    <section className="ticket-list" aria-label="Civic tickets">{session ? filtered.length ?
-      filtered.map(issue => <Ticket issue={issue} key={issue.id} session={session} refresh={refresh}/>) :
-      <p className="card">No reports match this view.</p> : !error && <p role="status">Loading reports…</p>}</section>
+    {error && <p role="alert" className="alert alert-danger">{error}</p>}
+
+    <section className="kpis" aria-label="Key figures">
+      <div className="kpi"><span>Total received</span><strong>{s?.reports ?? '…'}</strong><small>{s ? `${s.total} unique · ${s.merged} merged duplicates` : ''}</small></div>
+      <div className="kpi warn"><span>Pending</span><strong>{s?.open ?? '…'}</strong><small>{s ? `${s.inProgress} with action in progress` : ''}</small></div>
+      <div className="kpi ok"><span>Disposed</span><strong>{s?.resolved ?? '…'}</strong><small>{s ? `${s.verified} AI-verified fixes` : ''}</small></div>
+      <div className="kpi bad"><span>Beyond SLA</span><strong>{s?.overdue ?? '…'}</strong><small>auto-escalated</small></div>
+      <div className="kpi"><span>Avg. disposal time</span><strong>{s ? hoursLabel(s.avgResolutionHours) : '…'}</strong><small>{s ? percent(s.slaCompliance) + ' within SLA' : ''}</small></div>
+      <div className="kpi"><span>Citizen rating</span><strong>{s?.avgRating ? s.avgRating.toFixed(1) + ' / 5' : '—'}</strong><small>{s ? s.languages + ' languages received' : ''}</small></div>
+    </section>
+
+    {issues && issues.length > 0 && <div className="grid g2">
+      <Panel title="Department-wise status"><StackedBars label="Grievances by department and status" series={statusSeries}
+        rows={depts.map(item => ({ label: shortDept(item.department), values: item.values }))} /></Panel>
+      <Panel title="Received vs disposed · last 14 days"><TrendLines label="Grievances received and disposed per day"
+        series={[{ key: 'received', label: 'Received', color: 'var(--series-1)' }, { key: 'disposed', label: 'Disposed', color: 'var(--series-3)' }]}
+        points={trend.map(point => ({ label: dayLabel(point.day), values: { received: point.received, disposed: point.disposed } }))} /></Panel>
+      <Panel title="Disposed within SLA, by department"><RankedBars label="Disposed within SLA" max={1} format={percent}
+        rows={depts.filter(item => item.resolved > 0).map(item => ({ label: shortDept(item.department), value: item.slaCompliance ?? 0, detail: `${item.resolved} disposed` }))
+          .sort((a, b) => b.value - a.value)}
+        note={<p className="tiny muted">Departments with no disposed grievances are not shown.</p>} /></Panel>
+      <Panel title="Grievance map"><GrievanceMap issues={issues} height={300} /></Panel>
+    </div>}
+
+    <Panel title={`Grievance register (${filtered.length})`}>
+      <div className="filters">
+        <label>Search<input value={query} onChange={event => setQuery(event.target.value)} placeholder="Registration no., title, area" /></label>
+        <label>Department<select value={department} onChange={event => setDepartment(event.target.value)}><option value="">All departments</option>{departments.map(item => <option key={item}>{item}</option>)}</select></label>
+        <label>Status<select value={status} onChange={event => setStatus(event.target.value)}><option value="">All statuses</option>{statuses.map(item => <option value={item} key={item}>{statusNames[item]}</option>)}</select></label>
+      </div>
+      {!issues ? <p role="status">Loading…</p> : !filtered.length ? <Empty>No grievances match these filters.{session?.demoEnabled ? ' Use "Load demo data" to add sample grievances.' : ''}</Empty> :
+        <div className="table-wrap"><table className="data">
+          <thead><tr><th>Registration no.</th><th>Subject</th><th>Area</th><th>Department</th><th>Severity</th><th>Status</th><th>Service level</th><th className="num">Support</th></tr></thead>
+          <tbody>{filtered.slice(0, 50).map(issue => <tr key={issue.id}>
+            <td className="mono nowrap"><Link href={'/track?ref=' + encodeURIComponent(issue.refNo ?? issue.id)}>{issue.refNo ?? issue.id.slice(0, 8)}</Link><div className="tiny muted">{dateLabel(issue.createdAt)}</div></td>
+            <td>{issue.title}<div className="row" style={{ marginTop: 4 }}><Flags issue={issue} /></div></td>
+            <td className="small">{issue.location.ward ?? issue.location.address}</td>
+            <td className="small">{shortDept(issue.assignedDepartment)}</td>
+            <td><Severity value={issue.aiTriage.severity} /></td>
+            <td><StatusBadge status={issue.status} /></td>
+            <td><SlaBadge issue={issue} /></td>
+            <td className="num">{issue.upvotes}</td>
+          </tr>)}</tbody>
+        </table></div>}
+    </Panel>
   </div>
 }

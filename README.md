@@ -2,6 +2,16 @@
 
 AGORA routes multilingual infrastructure reports to municipal teams. Citizens can file reports and follow progress. Field staff work within their department, and the commissioner can reassign tickets or change priorities.
 
+## What's in the portal
+
+**Citizens:** home page in the style of a government portal (tricolour band, accessibility bar with A-/A/A+, contrast and English/हिन्दी), a 3-step **Lodge Grievance** wizard with a printable acknowledgement slip and registration number (`AGR-YYYY-NNNNNN`), **Track Status**, **My Grievances** (mobile OTP sign-in), rating and reopening of disposed cases, a public dashboard with charts and a map, the citizen charter with the escalation matrix, FAQ, and **AGORA Sahayak**, a Gemini helpdesk assistant.
+
+**Officers (`/admin`):** Overview (KPIs, AI daily brief, needs-attention list), Grievance Register (search, filters, sort, bulk forward/priority/remind, CSV export, case drawer), SLA & Escalations (L1/L2/L3 board), Map & Hotspots, AI Insights (Commissioner brief, AI engine status, AI re-triage queue), Department Performance (Commissioner only), Public Notices (Commissioner only; shown in the site ticker), and Audit Log.
+
+**Sign-in:** officers use User ID + password + server-rendered captcha, then a 6-digit OTP second factor. Accounts lock for 15 minutes after 5 failed attempts. Citizens use mobile OTP. Optional Google sign-in via Firebase Auth. Judge demo cards appear only when demo mode is on.
+
+**AI resilience:** every Gemini call goes through a model failover chain with per-attempt timeouts. Overloaded models are skipped for 2 minutes. If every model is down, reports are still accepted with keyword routing and flagged for AI re-triage, and the Commissioner brief and helpdesk fall back to rule-based answers.
+
 ## Run locally
 
 Use Node.js 20 or later.
@@ -11,11 +21,19 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000`. Set `GEMINI_API_KEY` in `.env.local` to use reporting, duplicate matching, resolution verification, and escalation drafts. The default model is `gemini-3.8-flash`. Set `GEMINI_MODEL` to override it.
+Open `http://localhost:3000`. Use **Load demo data** on the dashboard or console to add 16 multilingual sample grievances. Mobile `9000000000` owns a seeded grievance for trying the citizen flow.
 
-Use **Load demo reports** on the dashboard to populate four multilingual examples with synthetic evidence photos. **Judge demo access** on the sign-in page lets you try the commissioner, roads, and sanitation roles. For password login, set the corresponding `CIVIC_PASSWORD_ADMIN`, `CIVIC_PASSWORD_ROADS`, `CIVIC_PASSWORD_SANITATION`, `CIVIC_PASSWORD_WATER`, `CIVIC_PASSWORD_ELECTRICAL`, or `CIVIC_PASSWORD_SAFETY` value and sign in as the matching `@civicresolve.gov` account.
-
-For the live workflow, upload a photo, describe the hazard, and add GPS coordinates or a ward, street, or landmark. Browser support and permissions determine whether voice input and GPS are available. Staff start work and upload an After photo. An unsuccessful visual verification leaves the ticket in progress and records the verification notes. Citizens can draft an SLA escalation letter when a ticket becomes overdue.
+| Variable | Purpose |
+| --- | --- |
+| `GEMINI_API_KEY` | Required for AI triage, verification, translation, brief and helpdesk |
+| `GEMINI_MODEL` | Primary model (default `gemini-3.8-flash`) |
+| `GEMINI_FALLBACK_MODELS` | Comma-separated failover chain (default `gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-3.5-flash`) |
+| `CIVIC_SESSION_SECRET` | 32+ character session signing secret (required in production) |
+| `CIVIC_PASSWORD_<ROLE>` | Officer passwords: `ADMIN`, `ROADS`, `SANITATION`, `WATER`, `ELECTRICAL`, `SAFETY` |
+| `CIVIC_DEMO_LOGIN` | `true` enables judge demo cards and on-screen demo OTPs in production |
+| `CIVIC_OTP_DISPLAY` | `true` shows OTPs on screen (simulated SMS gateway) without enabling demo cards |
+| `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_APP_ID` | Enables Google sign-in through Firebase Auth |
+| `CIVIC_GOOGLE_OFFICERS` | Maps Google emails to officer roles, e.g. `you@gmail.com=admin;eng@gmail.com=roads` |
 
 ## Storage and deployment
 
@@ -41,19 +59,4 @@ npm test
 npm run build
 ```
 
-Vitest uses mocked Gemini responses and the in-memory repository. The suite covers the 100-meter boundary, duplicate merges, multilingual triage, spam rejection, status transitions, photo verification, role enforcement, SLA escalation, and demo seeding.
-
-## Commit sequence
-
-Run these commands from the application directory. Each step stages only its listed files.
-
-```sh
-git add spec.MD .gitignore package.json package-lock.json tsconfig.json next.config.ts postcss.config.mjs tailwind.config.ts eslint.config.mjs src/lib src/app/api public/demo
-git commit -m "Build AGORA triage and municipal API"
-
-git add src/components src/app/layout.tsx src/app/globals.css src/app/page.tsx src/app/login src/app/dashboard src/app/issues
-git commit -m "Add citizen reporting and municipal dashboard"
-
-git add apphosting.yaml Dockerfile .dockerignore tests/civic.test.ts README.md
-git commit -m "Add deployment config, verification suite, and setup guide"
-```
+Vitest uses mocked Gemini responses and the in-memory repository. The suite covers the 100-meter boundary, duplicate merges, multilingual triage, spam rejection, status transitions, photo verification, role enforcement, SLA escalation, demo seeding, model failover and keyword fallback, captcha + OTP + lockout sign-in, citizen OTP and data masking, feedback/reopen ownership, notices, CSV export and escalation levels.

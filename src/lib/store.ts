@@ -3,12 +3,16 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore, type Transaction } from 'firebase-admin/firestore'
-import { departments, type CivicIssue, type Department, type IssueStatus } from './model'
+import { departments, type CivicIssue, type Department, type IssueStatus, type Notice } from './model'
 
-const state = globalThis as typeof globalThis & { civicIssues?: Map<string, CivicIssue> }
+const state = globalThis as typeof globalThis & { civicIssues?: Map<string, CivicIssue>; civicNotices?: Map<string, Notice> }
 const memory = state.civicIssues ??= new Map()
+const noticeMemory = state.civicNotices ??= new Map()
+const summaryFields = ['id', 'refNo', 'title', 'originalDescription', 'translatedDescription', 'detectedLanguage', 'location', 'aiTriage',
+  'aiPending', 'resolutionVerification', 'status', 'assignedDepartment', 'assignedOfficer', 'handledBy', 'citizen', 'feedback',
+  'reopenCount', 'remindersSent', 'upvotes', 'duplicateMergeCount', 'createdAt', 'updatedAt', 'audit']
 type RecordData = Omit<CivicIssue, 'corroboratingImages' | 'resolutionImageBase64'>
-function collection() {
+function database() {
   const localAdc = join(process.env.APPDATA || join(homedir(), '.config'), 'gcloud', 'application_default_credentials.json')
   const configured = process.env.FIRESTORE_EMULATOR_HOST || process.env.GOOGLE_APPLICATION_CREDENTIALS
     || process.env.K_SERVICE || existsSync(localAdc)
@@ -17,8 +21,9 @@ function collection() {
     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'agora26',
     credential: applicationDefault(),
   })
-  return getFirestore(app).collection('issues')
+  return getFirestore(app)
 }
+const collection = () => database()?.collection('issues') ?? null
 
 function recordIssue(data: FirebaseFirestore.DocumentData): CivicIssue {
   const issue = data as CivicIssue
@@ -27,17 +32,19 @@ function recordIssue(data: FirebaseFirestore.DocumentData): CivicIssue {
 
 export function clearMemory() {
   memory.clear()
+  noticeMemory.clear()
 }
 
-export async function listIssues(department?: Department, status?: IssueStatus, openOnly = false) {
+/** Lists issues. Photos are skipped unless `withImages` is set, which keeps dashboard reads small. */
+export async function listIssues(department?: Department, status?: IssueStatus, openOnly = false, withImages = false) {
   const col = collection()
   let records: CivicIssue[]
   if (col) {
-    let query: FirebaseFirestore.Query = col
+    let query: FirebaseFirestore.Query = withImages ? col : col.select(...summaryFields)
     if (department) query = query.where('assignedDepartment', '==', department)
     if (status) query = query.where('status', '==', status)
     const snapshot = await query.get()
-    records = snapshot.docs.map(doc => recordIssue(doc.data()))
+    records = snapshot.docs.map(doc => recordIssue({ imageBase64: '', ...doc.data() }))
   } else {
     records = [...memory.values()].map(issue => structuredClone(issue))
   }
@@ -63,17 +70,10 @@ export async function getIssue(id: string): Promise<CivicIssue | undefined> {
 }
 
 function write(tx: Transaction, ref: FirebaseFirestore.DocumentReference, issue: CivicIssue) {
-  const record: RecordData = {
-    id: issue.id, title: issue.title, originalDescription: issue.originalDescription,
-    translatedDescription: issue.translatedDescription, detectedLanguage: issue.detectedLanguage,
-    imageBase64: issue.imageBase64, location: issue.location, aiTriage: issue.aiTriage,
-    status: issue.status, assignedDepartment: issue.assignedDepartment, upvotes: issue.upvotes,
-    duplicateMergeCount: issue.duplicateMergeCount, createdAt: issue.createdAt, updatedAt: issue.updatedAt,
-    ...(issue.handledBy ? { handledBy: issue.handledBy } : {}),
-    ...(issue.resolutionVerification ? { resolutionVerification: issue.resolutionVerification } : {}),
-    ...(issue.audit ? { audit: issue.audit.slice(-50) } : {}),
-  }
-  tx.set(ref, record, { merge: true })
+  const { corroboratingImages: _evidence, resolutionImageBase64: _after, ...rest } = issue
+  void [_evidence, _after]
+  const record: RecordData = JSON.parse(JSON.stringify({ ...rest, audit: issue.audit?.slice(-50) }))
+  tx.set(ref, record)
 }
 
 export async function mutateIssue(id: string, updater: (current: CivicIssue | undefined) => CivicIssue,
@@ -132,4 +132,36 @@ export async function commitReport(issue: CivicIssue, existing: CivicIssue[], ma
     tx.set(lock, { lastReport: issue.id })
     return updated
   })
+}
+
+export async function findByRef(refNo: string) {
+  const col = collection()
+  if (!col) return [...memory.values()].find(issue => issue.refNo === refNo)?.id
+  const snapshot = await col.where('refNo', '==', refNo).select('id').limit(1).get()
+  return snapshot.docs[0]?.id
+}
+
+export async function listNotices() {
+  const db = database()
+  if (!db) return [...noticeMemory.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const snapshot = await db.collection('notices').orderBy('createdAt', 'desc').limit(20).get()
+  return snapshot.docs.map(doc => doc.data() as Notice)
+}
+
+export async function saveNotice(notice: Notice) {
+  const db = database()
+  if (!db) noticeMemory.set(notice.id, notice)
+  else await db.collection('notices').doc(notice.id).set(notice)
+  return notice
+}
+
+export async function deleteNotice(id: string) {
+  const db = database()
+  if (!db) return noticeMemory.delete(id)
+  await db.collection('notices').doc(id).delete()
+  return true
+}
+
+export function storeMode() {
+  return collection() ? "firestore" : "memory"
 }

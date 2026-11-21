@@ -9,6 +9,8 @@ import { POST as seed } from '../src/app/api/issues/seed/route'
 import { haversineMeters, nearby } from '../src/lib/geo'
 import { departments, type CivicIssue } from '../src/lib/model'
 import { clearMemory, listIssues, mutateIssue } from '../src/lib/store'
+import { resetAiHealth } from '../src/lib/ai'
+import { clearLockouts } from '../src/lib/auth'
 
 const generate = vi.hoisted(() => vi.fn())
 vi.mock('@google/genai', async importOriginal => {
@@ -56,6 +58,8 @@ async function update(id: string, body: object, cookie?: string) {
 
 beforeEach(() => {
   clearMemory()
+  resetAiHealth()
+  clearLockouts()
   generate.mockReset()
   process.env.GEMINI_API_KEY = 'mock-key'
   process.env.CIVIC_DEMO_LOGIN = 'true'
@@ -165,12 +169,14 @@ describe('roles, verification and escalation', () => {
     expect(await (await escalation(input({ language: 'Tamil' }), context(ticket.id))).json()).toEqual({ letter: 'நகராட்சி புகார் கடிதம்' })
   })
 
-  it('loads four multilingual demo reports without duplicating them', async () => {
+  it('loads multilingual demo reports across every department without duplicating them', async () => {
     expect((await seed(input())).status).toBe(200)
     expect((await seed(input())).status).toBe(200)
-    const issues = await listIssues()
-    expect(issues).toHaveLength(4)
-    expect(new Set(issues.map(issue => issue.detectedLanguage)).size).toBe(4)
+    const issues = await listIssues(undefined, undefined, false, true)
+    expect(issues).toHaveLength(16)
+    expect(new Set(issues.map(issue => issue.detectedLanguage)).size).toBe(8)
+    expect(new Set(issues.map(issue => issue.assignedDepartment)).size).toBe(departments.length)
+    expect(new Set(issues.map(issue => issue.refNo)).size).toBe(16)
     expect(issues.every(issue => issue.imageBase64.startsWith('data:image/jpeg;'))).toBe(true)
   })
 })

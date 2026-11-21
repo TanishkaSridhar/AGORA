@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { readSession } from '../../../lib/auth'
-import { summary } from '../../../lib/civic'
+import { view } from '../../../lib/civic'
 import { route } from '../../../lib/http'
 import { departments, statuses } from '../../../lib/model'
 import { listIssues } from '../../../lib/store'
@@ -15,5 +15,5 @@ export const GET = route(async (request: Request) => {
   const status = z.enum(statuses).optional().parse(params.get('status') ?? undefined)
   const scoped = session.role === 'DEPT_STAFF' ? session.department : department
   const issues = session.role === 'DEPT_STAFF' && department && department !== scoped ? [] : await listIssues(scoped, status)
-  return Response.json(issues.map(summary), { headers: { 'Cache-Control': 'no-store' } })
+  return Response.json(issues.map(issue => view(issue, session)), { headers: { 'Cache-Control': 'no-store' } })
 })
