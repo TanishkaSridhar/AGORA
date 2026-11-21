@@ -1,24 +1,38 @@
 import { z } from 'zod'
 
 export const departments = [
-  'Roads & Infrastructure', 'Sanitation & Solid Waste', 'Water Supply & Drainage',
-  'Street Lighting & Electrical', 'Public Safety & Parks',
+  'Roads & Infrastructure',
+  'Sanitation & Solid Waste',
+  'Water Supply & Drainage',
+  'Street Lighting & Electrical',
+  'Public Safety & Parks',
 ] as const
 export const departmentCodes: Record<Department, string> = {
-  'Roads & Infrastructure': 'RDS', 'Sanitation & Solid Waste': 'SAN', 'Water Supply & Drainage': 'WTR',
-  'Street Lighting & Electrical': 'ELC', 'Public Safety & Parks': 'PSP',
+  'Roads & Infrastructure': 'RDS',
+  'Sanitation & Solid Waste': 'SAN',
+  'Water Supply & Drainage': 'WTR',
+  'Street Lighting & Electrical': 'ELC',
+  'Public Safety & Parks': 'PSP',
 }
 export const statuses = ['OPEN', 'IN_PROGRESS', 'RESOLVED'] as const
 export const statusNames: Record<IssueStatus, string> = {
-  OPEN: 'Pending', IN_PROGRESS: 'Action in progress', RESOLVED: 'Disposed',
+  OPEN: 'Pending',
+  IN_PROGRESS: 'Action in progress',
+  RESOLVED: 'Disposed',
 }
 export const languages = {
-  English: 'en-IN', Tamil: 'ta-IN', Hindi: 'hi-IN', Telugu: 'te-IN',
-  Kannada: 'kn-IN', Malayalam: 'ml-IN', Bengali: 'bn-IN', Marathi: 'mr-IN',
+  English: 'en-IN',
+  Tamil: 'ta-IN',
+  Hindi: 'hi-IN',
+  Telugu: 'te-IN',
+  Kannada: 'kn-IN',
+  Malayalam: 'ml-IN',
+  Bengali: 'bn-IN',
+  Marathi: 'mr-IN',
 } as const
 export type Language = keyof typeof languages
-export type Department = typeof departments[number]
-export type IssueStatus = typeof statuses[number]
+export type Department = (typeof departments)[number]
+export type IssueStatus = (typeof statuses)[number]
 export type UserRole = 'CITIZEN' | 'DEPT_STAFF' | 'SUPER_ADMIN'
 
 export interface AuthSession {
@@ -34,37 +48,63 @@ export interface AuthSession {
 }
 
 const sentence = z.string().trim().min(1).max(2500)
-export const mobileSchema = z.string().trim().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number')
-export const jpeg = z.string().max(750_000).regex(/^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/]+={0,2}$/)
-export const locationSchema = z.object({
-  address: z.string().trim().min(1).max(250),
-  ward: z.string().trim().max(80).optional(),
-  lat: z.number().min(-90).max(90).optional(),
-  lng: z.number().min(-180).max(180).optional(),
-}).refine(({ lat, lng }) => (lat === undefined) === (lng === undefined), 'Provide both GPS coordinates')
+export const mobileSchema = z
+  .string()
+  .trim()
+  .regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number')
+export const jpeg = z
+  .string()
+  .max(750_000)
+  .regex(/^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/]+={0,2}$/)
+export const locationSchema = z
+  .object({
+    address: z.string().trim().min(1).max(250),
+    ward: z.string().trim().max(80).optional(),
+    lat: z.number().min(-90).max(90).optional(),
+    lng: z.number().min(-180).max(180).optional(),
+  })
+  .refine(({ lat, lng }) => (lat === undefined) === (lng === undefined), 'Provide both GPS coordinates')
 export const categories = ['road', 'garbage', 'drain', 'light', 'tree', 'other'] as const
 /** 8 kHz mono WAV voice note recorded in the browser (max ~40 s). */
-export const wavVoice = z.string().max(900_000).regex(/^data:audio\/wav;base64,[A-Za-z0-9+/]+={0,2}$/, 'Invalid voice recording')
-export const reportSchema = z.object({
-  imageBase64: jpeg, description: z.string().trim().max(2500).default(''),
-  audio: wavVoice.optional(), category: z.enum(categories).optional(),
-  preferredLanguage: z.custom<Language>(value => typeof value === 'string' && Object.hasOwn(languages, value)).default('English'),
-  location: locationSchema,
-  citizen: z.object({ name: z.string().trim().min(1).max(100), mobile: mobileSchema.optional() }).optional(),
-}).refine(report => report.description.length >= 3 || !!report.audio, 'Describe the problem or record a voice note')
+export const wavVoice = z
+  .string()
+  .max(900_000)
+  .regex(/^data:audio\/wav;base64,[A-Za-z0-9+/]+={0,2}$/, 'Invalid voice recording')
+export const reportSchema = z
+  .object({
+    imageBase64: jpeg,
+    description: z.string().trim().max(2500).default(''),
+    audio: wavVoice.optional(),
+    category: z.enum(categories).optional(),
+    preferredLanguage: z
+      .custom<Language>(value => typeof value === 'string' && Object.hasOwn(languages, value))
+      .default('English'),
+    location: locationSchema,
+    citizen: z.object({ name: z.string().trim().min(1).max(100), mobile: mobileSchema.optional() }).optional(),
+  })
+  .refine(report => report.description.length >= 3 || !!report.audio, 'Describe the problem or record a voice note')
 
 export const triageSchema = z.object({
-  title: sentence, translatedDescription: sentence, detectedLanguage: sentence,
-  category: sentence, department: z.enum(departments), severity: z.number().int().min(1).max(5),
+  title: sentence,
+  translatedDescription: sentence,
+  detectedLanguage: sentence,
+  category: sentence,
+  department: z.enum(departments),
+  severity: z.number().int().min(1).max(5),
   urgencyLabel: z.enum(['Low', 'Moderate', 'High', 'Critical']),
-  confidence: z.number().min(0).max(1), hazardSummary: sentence,
-  cascadingRiskAlert: sentence.optional(), recommendedAction: sentence,
-  citizenReplyNative: sentence, estimatedSlaHours: z.number().int().min(1).max(8760),
+  confidence: z.number().min(0).max(1),
+  hazardSummary: sentence,
+  cascadingRiskAlert: sentence.optional(),
+  recommendedAction: sentence,
+  citizenReplyNative: sentence,
+  estimatedSlaHours: z.number().int().min(1).max(8760),
   isValidCivicIssue: z.boolean(),
   transcript: z.string().trim().max(2500).optional(),
 })
 export const verificationSchema = z.object({
-  verified: z.boolean(), confidence: z.number().min(0).max(1), notes: sentence,
+  verified: z.boolean(),
+  confidence: z.number().min(0).max(1),
+  notes: sentence,
 })
 export type Report = z.infer<typeof reportSchema>
 export type Verification = z.infer<typeof verificationSchema>
@@ -112,7 +152,10 @@ export interface CivicIssue {
   updatedAt: string
   audit?: AuditEntry[]
 }
-export type IssueSummary = Omit<CivicIssue, 'imageBase64' | 'resolutionImageBase64' | 'corroboratingImages' | 'voiceNote'>
+export type IssueSummary = Omit<
+  CivicIssue,
+  'imageBase64' | 'resolutionImageBase64' | 'corroboratingImages' | 'voiceNote'
+>
 
 export interface Notice {
   id: string
@@ -128,8 +171,7 @@ export const noticeSchema = z.object({
 
 export const urgency = (severity: number) => (['Low', 'Moderate', 'High', 'High', 'Critical'] as const)[severity - 1]
 export const dueAt = (issue: IssueSummary) => Date.parse(issue.createdAt) + issue.aiTriage.estimatedSlaHours * 3_600_000
-export const isOverdue = (issue: IssueSummary, now = Date.now()) =>
-  issue.status !== 'RESOLVED' && now >= dueAt(issue)
+export const isOverdue = (issue: IssueSummary, now = Date.now()) => issue.status !== 'RESOLVED' && now >= dueAt(issue)
 
 /**
  * Escalation level for an overdue ticket: L1 at breach (department head),
@@ -142,4 +184,4 @@ export function escalationLevel(issue: IssueSummary, now = Date.now()) {
 }
 export const escalationNames = ['', 'L1 · Department head', 'L2 · Zonal officer', 'L3 · Commissioner']
 
-export const maskMobile = (mobile?: string) => mobile ? mobile.slice(0, 2) + '******' + mobile.slice(-2) : undefined
+export const maskMobile = (mobile?: string) => (mobile ? mobile.slice(0, 2) + '******' + mobile.slice(-2) : undefined)

@@ -5,22 +5,56 @@ import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore, type Transaction } from 'firebase-admin/firestore'
 import { departments, type CivicIssue, type Department, type IssueStatus, type Notice } from './model'
 
-const state = globalThis as typeof globalThis & { civicIssues?: Map<string, CivicIssue>; civicNotices?: Map<string, Notice> }
-const memory = state.civicIssues ??= new Map()
-const noticeMemory = state.civicNotices ??= new Map()
-const summaryFields = ['id', 'refNo', 'title', 'originalDescription', 'translatedDescription', 'detectedLanguage', 'location', 'aiTriage',
-  'aiPending', 'resolutionVerification', 'status', 'assignedDepartment', 'assignedOfficer', 'handledBy', 'citizen', 'feedback',
-  'reopenCount', 'remindersSent', 'upvotes', 'duplicateMergeCount', 'createdAt', 'updatedAt', 'audit']
+const state = globalThis as typeof globalThis & {
+  civicIssues?: Map<string, CivicIssue>
+  civicNotices?: Map<string, Notice>
+}
+const memory = (state.civicIssues ??= new Map())
+const noticeMemory = (state.civicNotices ??= new Map())
+const summaryFields = [
+  'id',
+  'refNo',
+  'title',
+  'originalDescription',
+  'translatedDescription',
+  'detectedLanguage',
+  'location',
+  'aiTriage',
+  'aiPending',
+  'resolutionVerification',
+  'status',
+  'assignedDepartment',
+  'assignedOfficer',
+  'handledBy',
+  'citizen',
+  'feedback',
+  'reopenCount',
+  'remindersSent',
+  'upvotes',
+  'duplicateMergeCount',
+  'createdAt',
+  'updatedAt',
+  'audit',
+]
 type RecordData = Omit<CivicIssue, 'corroboratingImages' | 'resolutionImageBase64' | 'voiceNote'>
 function database() {
-  const localAdc = join(process.env.APPDATA || join(homedir(), '.config'), 'gcloud', 'application_default_credentials.json')
-  const configured = process.env.FIRESTORE_EMULATOR_HOST || process.env.GOOGLE_APPLICATION_CREDENTIALS
-    || process.env.K_SERVICE || existsSync(localAdc)
+  const localAdc = join(
+    process.env.APPDATA || join(homedir(), '.config'),
+    'gcloud',
+    'application_default_credentials.json',
+  )
+  const configured =
+    process.env.FIRESTORE_EMULATOR_HOST ||
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    process.env.K_SERVICE ||
+    existsSync(localAdc)
   if (process.env.NODE_ENV === 'test' || process.env.CIVIC_STORE === 'memory' || !configured) return null
-  const app = getApps()[0] ?? initializeApp({
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'agora26',
-    credential: applicationDefault(),
-  })
+  const app =
+    getApps()[0] ??
+    initializeApp({
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'agora26',
+      credential: applicationDefault(),
+    })
   return getFirestore(app)
 }
 const collection = () => database()?.collection('issues') ?? null
@@ -48,9 +82,17 @@ export async function listIssues(department?: Department, status?: IssueStatus, 
   } else {
     records = [...memory.values()].map(issue => structuredClone(issue))
   }
-  return records.filter(issue => (!department || issue.assignedDepartment === department)
-    && (!status || issue.status === status) && (!openOnly || issue.status !== 'RESOLVED'))
-    .sort((a, b) => b.aiTriage.severity - a.aiTriage.severity || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id))
+  return records
+    .filter(
+      issue =>
+        (!department || issue.assignedDepartment === department) &&
+        (!status || issue.status === status) &&
+        (!openOnly || issue.status !== 'RESOLVED'),
+    )
+    .sort(
+      (a, b) =>
+        b.aiTriage.severity - a.aiTriage.severity || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id),
+    )
 }
 
 export async function getIssue(id: string): Promise<CivicIssue | undefined> {
@@ -59,13 +101,18 @@ export async function getIssue(id: string): Promise<CivicIssue | undefined> {
   const ref = col.doc(id)
   const [record, evidence] = await Promise.all([ref.get(), ref.collection('evidence').get()])
   if (!record.exists) return
-  const photos = evidence.docs.filter(doc => doc.id !== 'voice').map(doc => ({ id: doc.id, image: doc.get('image') as string }))
+  const photos = evidence.docs
+    .filter(doc => doc.id !== 'voice')
+    .map(doc => ({ id: doc.id, image: doc.get('image') as string }))
   const voice = evidence.docs.find(doc => doc.id === 'voice')?.get('audio') as string | undefined
   const issue = record.data() as CivicIssue
   const after = photos.find(item => item.id === 'after')?.image ?? issue.resolutionImageBase64
   return {
     ...issue,
-    corroboratingImages: [...(issue.corroboratingImages ?? []), ...photos.filter(item => item.id !== 'after').map(item => item.image)],
+    corroboratingImages: [
+      ...(issue.corroboratingImages ?? []),
+      ...photos.filter(item => item.id !== 'after').map(item => item.image),
+    ],
     ...(after ? { resolutionImageBase64: after } : {}),
     ...(voice ? { voiceNote: voice } : {}),
   }
@@ -78,8 +125,11 @@ function write(tx: Transaction, ref: FirebaseFirestore.DocumentReference, issue:
   tx.set(ref, record)
 }
 
-export async function mutateIssue(id: string, updater: (current: CivicIssue | undefined) => CivicIssue,
-  evidence?: { id: string; image: string }) {
+export async function mutateIssue(
+  id: string,
+  updater: (current: CivicIssue | undefined) => CivicIssue,
+  evidence?: { id: string; image: string },
+) {
   const col = collection()
   if (!col) {
     const issue = updater(structuredClone(memory.get(id)))
@@ -100,12 +150,17 @@ export async function mutateIssue(id: string, updater: (current: CivicIssue | un
 
 export async function commitReport(issue: CivicIssue, existing: CivicIssue[], match?: CivicIssue) {
   const department = issue.assignedDepartment
-  const signature = (records: CivicIssue[]) => records
-    .filter(current => current.assignedDepartment === department && current.status !== 'RESOLVED')
-    .map(current => current.id).sort().join(',')
+  const signature = (records: CivicIssue[]) =>
+    records
+      .filter(current => current.assignedDepartment === department && current.status !== 'RESOLVED')
+      .map(current => current.id)
+      .sort()
+      .join(',')
   const expected = signature(existing)
   const merge = (current: CivicIssue): CivicIssue => ({
-    ...current, upvotes: current.upvotes + 1, duplicateMergeCount: current.duplicateMergeCount + 1,
+    ...current,
+    upvotes: current.upvotes + 1,
+    duplicateMergeCount: current.duplicateMergeCount + 1,
     updatedAt: new Date().toISOString(),
   })
   const col = collection()
@@ -166,5 +221,5 @@ export async function deleteNotice(id: string) {
 }
 
 export function storeMode() {
-  return collection() ? "firestore" : "memory"
+  return collection() ? 'firestore' : 'memory'
 }

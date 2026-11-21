@@ -21,15 +21,30 @@ import { clearMemory, mutateIssue } from '../src/lib/store'
 const generate = vi.hoisted(() => vi.fn())
 vi.mock('@google/genai', async importOriginal => {
   const actual = await importOriginal<typeof import('@google/genai')>()
-  return { ...actual, GoogleGenAI: class { models = { generateContent: generate } } }
+  return {
+    ...actual,
+    GoogleGenAI: class {
+      models = { generateContent: generate }
+    },
+  }
 })
 
 const image = 'data:image/jpeg;base64,/9j/4AAQSkZJRg=='
 const location = { address: 'Ward 4, Chennai', lat: 13.04, lng: 80.23 }
 const triaged = {
-  title: 'Open drain near school', translatedDescription: 'There is an open drain near the school.', detectedLanguage: 'English',
-  category: 'Drain', department: departments[2], severity: 5, urgencyLabel: 'Critical', confidence: 0.9,
-  hazardSummary: 'Uncovered drain', recommendedAction: 'Cover the drain.', citizenReplyNative: 'Registered.', estimatedSlaHours: 4, isValidCivicIssue: true,
+  title: 'Open drain near school',
+  translatedDescription: 'There is an open drain near the school.',
+  detectedLanguage: 'English',
+  category: 'Drain',
+  department: departments[2],
+  severity: 5,
+  urgencyLabel: 'Critical',
+  confidence: 0.9,
+  hazardSummary: 'Uncovered drain',
+  recommendedAction: 'Cover the drain.',
+  citizenReplyNative: 'Registered.',
+  estimatedSlaHours: 4,
+  isValidCivicIssue: true,
 }
 const mockResult = (data: unknown) => generate.mockResolvedValueOnce({ text: JSON.stringify(data) })
 const overloaded = () => generate.mockRejectedValueOnce(new Error('{"error":{"code":503,"status":"UNAVAILABLE"}}'))
@@ -37,12 +52,15 @@ const allDown = () => modelChain().forEach(overloaded)
 const context = (id: string) => ({ params: Promise.resolve({ id }) })
 function input(body?: unknown, cookie?: string, method = 'POST', path = '/') {
   return new Request('http://localhost' + path, {
-    method, headers: { ...(cookie ? { Cookie: cookie } : {}), 'Content-Type': 'application/json' },
+    method,
+    headers: { ...(cookie ? { Cookie: cookie } : {}), 'Content-Type': 'application/json' },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
 }
 const cookieOf = (response: Response) => response.headers.get('set-cookie')!.split(';')[0]
-async function demo(role: string) { return cookieOf(await login(input({ demo: role }))) }
+async function demo(role: string) {
+  return cookieOf(await login(input({ demo: role })))
+}
 async function citizen(mobile: string) {
   const sent = await (await requestOtp(input({ mobile }))).json()
   expect(sent.demoOtp).toMatch(/^\d{6}$/)
@@ -56,7 +74,19 @@ async function captchaAnswer() {
   return { token, answer: [...markup.matchAll(/<text[^>]*>(.)<\/text>/g)].map(match => match[1]).join('') }
 }
 async function lodge(cookie?: string, body: object = {}) {
-  const response = await triage(input({ imageBase64: image, description: 'Open drain near the school gate', preferredLanguage: 'English', location, citizen: { name: 'Asha' }, ...body }, cookie))
+  const response = await triage(
+    input(
+      {
+        imageBase64: image,
+        description: 'Open drain near the school gate',
+        preferredLanguage: 'English',
+        location,
+        citizen: { name: 'Asha' },
+        ...body,
+      },
+      cookie,
+    ),
+  )
   return { status: response.status, body: await response.json() }
 }
 
@@ -87,7 +117,10 @@ describe('resilient AI', () => {
     allDown()
     const { status, body } = await lodge()
     expect(status).toBe(201)
-    expect(body).toMatchObject({ aiPending: true, issue: { assignedDepartment: 'Water Supply & Drainage', aiPending: true } })
+    expect(body).toMatchObject({
+      aiPending: true,
+      issue: { assignedDepartment: 'Water Supply & Drainage', aiPending: true },
+    })
     expect(body.refNo).toMatch(/^AGR-\d{4}-\d{6}$/)
     const admin = await demo('admin')
     resetAiHealth()
@@ -115,18 +148,40 @@ describe('resilient AI', () => {
     expect(answer).toMatchObject({ ticketRef: body.refNo, reply: expect.stringContaining('pending') })
     expect(JSON.stringify(generate.mock.lastCall![0].contents)).toContain(body.refNo)
     allDown()
-    expect(await (await assistant(input({ message: 'Status of ' + body.refNo }))).json()).toMatchObject({ degraded: true, reply: expect.stringContaining(body.refNo) })
+    expect(await (await assistant(input({ message: 'Status of ' + body.refNo }))).json()).toMatchObject({
+      degraded: true,
+      reply: expect.stringContaining(body.refNo),
+    })
   })
 })
 
 describe('credible sign-in', () => {
   it('requires a valid captcha, then a second-factor OTP for officers', async () => {
-    const wrong = await login(input({ email: 'roads@civicresolve.gov', password: 'correct-horse-battery', captchaToken: 'x.y', captchaAnswer: 'AAAAA' }))
+    const wrong = await login(
+      input({
+        email: 'roads@civicresolve.gov',
+        password: 'correct-horse-battery',
+        captchaToken: 'x.y',
+        captchaAnswer: 'AAAAA',
+      }),
+    )
     expect(wrong.status).toBe(400)
     const { token, answer } = await captchaAnswer()
-    const first = await (await login(input({ email: 'roads@civicresolve.gov', password: 'correct-horse-battery', captchaToken: token, captchaAnswer: answer.toLowerCase() }))).json()
+    const first = await (
+      await login(
+        input({
+          email: 'roads@civicresolve.gov',
+          password: 'correct-horse-battery',
+          captchaToken: token,
+          captchaAnswer: answer.toLowerCase(),
+        }),
+      )
+    ).json()
     expect(first).toMatchObject({ otpRequired: true, demoOtp: expect.stringMatching(/^\d{6}$/) })
-    expect((await login(input({ challenge: first.challenge, otp: first.demoOtp === '000000' ? '111111' : '000000' }))).status).toBe(401)
+    expect(
+      (await login(input({ challenge: first.challenge, otp: first.demoOtp === '000000' ? '111111' : '000000' })))
+        .status,
+    ).toBe(401)
     const done = await login(input({ challenge: first.challenge, otp: first.demoOtp }))
     expect(done.status).toBe(200)
     expect(await done.json()).toMatchObject({ role: 'DEPT_STAFF', department: departments[0], method: 'password' })
@@ -135,10 +190,23 @@ describe('credible sign-in', () => {
   it('locks an officer account after five failed passwords', async () => {
     for (let attempt = 0; attempt < 5; attempt++) {
       const { token, answer } = await captchaAnswer()
-      expect((await login(input({ email: 'roads@civicresolve.gov', password: 'wrong', captchaToken: token, captchaAnswer: answer }))).status).toBe(401)
+      expect(
+        (
+          await login(
+            input({ email: 'roads@civicresolve.gov', password: 'wrong', captchaToken: token, captchaAnswer: answer }),
+          )
+        ).status,
+      ).toBe(401)
     }
     const { token, answer } = await captchaAnswer()
-    const locked = await login(input({ email: 'roads@civicresolve.gov', password: 'correct-horse-battery', captchaToken: token, captchaAnswer: answer }))
+    const locked = await login(
+      input({
+        email: 'roads@civicresolve.gov',
+        password: 'correct-horse-battery',
+        captchaToken: token,
+        captchaAnswer: answer,
+      }),
+    )
     expect(locked.status).toBe(429)
   })
 
@@ -159,7 +227,9 @@ describe('citizen journey', () => {
     expect(mineList.map((issue: IssueSummary) => issue.id)).toEqual([body.issue.id])
     const publicList = await (await issueList(input(undefined, undefined, 'GET'))).json()
     expect(publicList[0].citizen).toEqual({ name: 'A***', mobile: '98******10' })
-    const tracked = await (await track(input(undefined, undefined, 'GET', '/api/track?ref=' + body.refNo.toLowerCase()))).json()
+    const tracked = await (
+      await track(input(undefined, undefined, 'GET', '/api/track?ref=' + body.refNo.toLowerCase()))
+    ).json()
     expect(tracked).toMatchObject({ id: body.issue.id, citizen: { mobile: '98******10' } })
     expect((await track(input(undefined, undefined, 'GET', '/api/track?ref=AGR-2000-000000'))).status).toBe(404)
   })
@@ -171,15 +241,23 @@ describe('citizen journey', () => {
     const { body } = await lodge(asha)
     const water = await demo('water')
     mockResult({ text: 'வேலை தொடங்கியது.' })
-    const started = await (await patch(input({ status: 'IN_PROGRESS', remarks: 'Work started.' }, water, 'PATCH'), context(body.issue.id))).json()
+    const started = await (
+      await patch(input({ status: 'IN_PROGRESS', remarks: 'Work started.' }, water, 'PATCH'), context(body.issue.id))
+    ).json()
     expect(started.audit.at(-1)).toMatchObject({ remarks: 'Work started.', remarksNative: 'வேலை தொடங்கியது.' })
     expect((await patch(input({ feedback: { rating: 5 } }, asha, 'PATCH'), context(body.issue.id))).status).toBe(409)
     mockResult({ verified: true, confidence: 0.9, notes: 'Fixed.' })
     await patch(input({ status: 'RESOLVED', resolutionImageBase64: image }, water, 'PATCH'), context(body.issue.id))
     expect((await patch(input({ feedback: { rating: 5 } }, other, 'PATCH'), context(body.issue.id))).status).toBe(403)
-    const reopened = await (await patch(input({ reopen: { reason: 'Still open' } }, asha, 'PATCH'), context(body.issue.id))).json()
+    const reopened = await (
+      await patch(input({ reopen: { reason: 'Still open' } }, asha, 'PATCH'), context(body.issue.id))
+    ).json()
     expect(reopened).toMatchObject({ status: 'IN_PROGRESS', reopenCount: 1 })
-    expect(reopened.audit.at(-1)).toMatchObject({ actor: 'Citizen', action: 'Reopened by citizen', remarks: 'Still open' })
+    expect(reopened.audit.at(-1)).toMatchObject({
+      actor: 'Citizen',
+      action: 'Reopened by citizen',
+      remarks: 'Still open',
+    })
   })
 })
 
@@ -194,9 +272,13 @@ describe('officer console', () => {
     expect((await postNotice(input({ text: 'Monsoon alert', kind: 'alert' }, admin))).status).toBe(201)
     expect(await (await notices()).json()).toMatchObject([{ text: 'Monsoon alert', kind: 'alert' }])
     expect((await patch(input({ reminder: true }, water, 'PATCH'), context(body.issue.id))).status).toBe(403)
-    expect(await (await patch(input({ reminder: true }, admin, 'PATCH'), context(body.issue.id))).json()).toMatchObject({ remindersSent: 1 })
+    expect(await (await patch(input({ reminder: true }, admin, 'PATCH'), context(body.issue.id))).json()).toMatchObject(
+      { remindersSent: 1 },
+    )
     expect((await patch(input({ assignedOfficer: 'JE Rao' }, roads, 'PATCH'), context(body.issue.id))).status).toBe(403)
-    expect(await (await patch(input({ assignedOfficer: 'JE Rao' }, water, 'PATCH'), context(body.issue.id))).json()).toMatchObject({ assignedOfficer: 'JE Rao', citizen: { name: 'Asha' } })
+    expect(
+      await (await patch(input({ assignedOfficer: 'JE Rao' }, water, 'PATCH'), context(body.issue.id))).json(),
+    ).toMatchObject({ assignedOfficer: 'JE Rao', citizen: { name: 'Asha' } })
     expect((await exportCsv(input(undefined, undefined, 'GET'))).status).toBe(401)
     await mutateIssue(body.issue.id, issue => ({ ...issue!, title: '=HYPERLINK("x")' }))
     const csv = await (await exportCsv(input(undefined, water, 'GET'))).text()
@@ -205,7 +287,11 @@ describe('officer console', () => {
   })
 
   it('escalates overdue grievances through three levels', async () => {
-    const base = { status: 'OPEN', createdAt: new Date(0).toISOString(), aiTriage: { estimatedSlaHours: 10 } } as unknown as IssueSummary
+    const base = {
+      status: 'OPEN',
+      createdAt: new Date(0).toISOString(),
+      aiTriage: { estimatedSlaHours: 10 },
+    } as unknown as IssueSummary
     expect(escalationLevel(base, 9 * 3_600_000)).toBe(0)
     expect(escalationLevel(base, 10 * 3_600_000)).toBe(1)
     expect(escalationLevel(base, 15 * 3_600_000)).toBe(2)

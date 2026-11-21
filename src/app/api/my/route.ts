@@ -1,6 +1,6 @@
-import { readSession } from '../../../lib/auth'
-import { citizenIssues } from '../../../lib/civic'
-import { route } from '../../../lib/http'
+import { readSession } from '@/lib/auth'
+import { citizenIssues } from '@/lib/civic'
+import { route } from '@/lib/http'
 
 export const dynamic = 'force-dynamic'
 

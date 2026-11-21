@@ -6,3 +6,4 @@ node_modules/
 firebase-debug.log
 *.tsbuildinfo
 next-env.d.ts
+coverage

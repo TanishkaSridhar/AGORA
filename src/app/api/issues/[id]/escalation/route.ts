@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { escalation } from '../../../../../lib/ai'
-import { visibleIssue } from '../../../../../lib/civic'
-import { HttpError, json, route } from '../../../../../lib/http'
-import { isOverdue, languages, type Language } from '../../../../../lib/model'
+import { escalation } from '@/lib/ai'
+import { visibleIssue } from '@/lib/civic'
+import { HttpError, json, route } from '@/lib/http'
+import { isOverdue, languages, type Language } from '@/lib/model'
 
 const supported = Object.keys(languages) as [Language, ...Language[]]
 

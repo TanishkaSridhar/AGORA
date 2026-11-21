@@ -15,7 +15,12 @@ import { clearLockouts } from '../src/lib/auth'
 const generate = vi.hoisted(() => vi.fn())
 vi.mock('@google/genai', async importOriginal => {
   const actual = await importOriginal<typeof import('@google/genai')>()
-  return { ...actual, GoogleGenAI: class { models = { generateContent: generate } } }
+  return {
+    ...actual,
+    GoogleGenAI: class {
+      models = { generateContent: generate }
+    },
+  }
 })
 
 const image = 'data:image/jpeg;base64,/9j/4AAQSkZJRg=='
@@ -23,20 +28,32 @@ const latitude = 13.04
 const home = { address: 'Ward 4, Chennai', lat: latitude, lng: 80.23 }
 const report = { imageBase64: image, description: 'பெரிய பள்ளம் உள்ளது.', preferredLanguage: 'Tamil', location: home }
 const response = {
-  title: 'Pothole near bus stop', translatedDescription: 'A large pothole is present.', detectedLanguage: 'Tamil',
-  category: 'Pothole', department: departments[0], severity: 4, urgencyLabel: 'High', confidence: 0.93,
-  hazardSummary: 'Open pothole in a busy roadway', recommendedAction: 'Barricade the pothole and repair the road surface.',
+  title: 'Pothole near bus stop',
+  translatedDescription: 'A large pothole is present.',
+  detectedLanguage: 'Tamil',
+  category: 'Pothole',
+  department: departments[0],
+  severity: 4,
+  urgencyLabel: 'High',
+  confidence: 0.93,
+  hazardSummary: 'Open pothole in a busy roadway',
+  recommendedAction: 'Barricade the pothole and repair the road surface.',
   citizenReplyNative: 'புகார் பதிவு செய்யப்பட்டது. பள்ளத்திலிருந்து விலகி இருங்கள்.',
-  estimatedSlaHours: 24, isValidCivicIssue: true, cascadingRiskAlert: 'Water could obscure the pothole during rain.',
+  estimatedSlaHours: 24,
+  isValidCivicIssue: true,
+  cascadingRiskAlert: 'Water could obscure the pothole during rain.',
 }
 
 function input(body?: unknown, cookie?: string, method = 'POST', path = '/') {
   return new Request('http://localhost' + path, {
-    method, headers: { ...(cookie ? { Cookie: cookie } : {}), 'Content-Type': 'application/json' },
+    method,
+    headers: { ...(cookie ? { Cookie: cookie } : {}), 'Content-Type': 'application/json' },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
 }
-function mockResult(data: unknown) { generate.mockResolvedValueOnce({ text: JSON.stringify(data) }) }
+function mockResult(data: unknown) {
+  generate.mockResolvedValueOnce({ text: JSON.stringify(data) })
+}
 const context = (id: string) => ({ params: Promise.resolve({ id }) })
 
 async function submit() {
@@ -67,7 +84,7 @@ beforeEach(() => {
 
 describe('geospatial and semantic triage', () => {
   it('uses a 100m Haversine threshold and normalized address fallback', () => {
-    const point = (meters: number) => ({ ...home, lat: latitude + meters / 6_371_000 * 180 / Math.PI })
+    const point = (meters: number) => ({ ...home, lat: latitude + ((meters / 6_371_000) * 180) / Math.PI })
     expect(haversineMeters(home, point(100))).toBeCloseTo(100, 7)
     expect(nearby(home, point(99))).toBe(true)
     expect(nearby(home, point(101))).toBe(false)
@@ -85,10 +102,12 @@ describe('geospatial and semantic triage', () => {
     expect(issue.detectedLanguage).toBe(language)
     expect(issue.aiTriage.recommendedAction).toBe(response.recommendedAction)
     expect(issue.aiTriage.citizenReplyNative).toBe(reply)
-    expect(generate).toHaveBeenCalledWith(expect.objectContaining({
-      model: 'gemini-3.8-flash',
-      config: expect.objectContaining({ responseMimeType: 'application/json', responseSchema: expect.any(Object) }),
-    }))
+    expect(generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'gemini-3.8-flash',
+        config: expect.objectContaining({ responseMimeType: 'application/json', responseSchema: expect.any(Object) }),
+      }),
+    )
   })
 
   it('merges matching nearby reports and keeps their evidence', async () => {
@@ -97,7 +116,10 @@ describe('geospatial and semantic triage', () => {
     mockResult({ id: original.id })
     const result = await triage(input({ ...report, location: { ...home, lat: latitude + 0.0005 } }))
     expect(result.status).toBe(200)
-    expect(await result.json()).toMatchObject({ merged: true, issue: { id: original.id, upvotes: 1, duplicateMergeCount: 1 } })
+    expect(await result.json()).toMatchObject({
+      merged: true,
+      issue: { id: original.id, upvotes: 1, duplicateMergeCount: 1 },
+    })
     const stored = await listIssues()
     expect(stored).toHaveLength(1)
     expect(stored[0].corroboratingImages).toEqual([image])
@@ -125,7 +147,9 @@ describe('roles, verification and escalation', () => {
     const roads = await signIn('roads')
     const sanitation = await signIn('sanitation')
     const admin = await signIn('admin')
-    await expect((await session(input(undefined, roads + 'x', 'GET'))).json()).resolves.toMatchObject({ role: 'CITIZEN' })
+    await expect((await session(input(undefined, roads + 'x', 'GET'))).json()).resolves.toMatchObject({
+      role: 'CITIZEN',
+    })
     expect(await (await issueList(input(undefined, sanitation, 'GET'))).json()).toEqual([])
     expect((await issueDetail(input(undefined, sanitation, 'GET'), context(ticket.id))).status).toBe(403)
     expect((await update(ticket.id, { status: 'IN_PROGRESS' })).status).toBe(403)
@@ -134,10 +158,16 @@ describe('roles, verification and escalation', () => {
     expect((await update(ticket.id, { severity: 5 }, roads)).status).toBe(403)
     expect((await update(ticket.id, { status: 'IN_PROGRESS' }, roads)).status).toBe(200)
     expect((await update(ticket.id, { upvote: true })).status).toBe(200)
-    const updated = await update(ticket.id, { assignedDepartment: departments[1], severity: 5, estimatedSlaHours: 4 }, admin)
+    const updated = await update(
+      ticket.id,
+      { assignedDepartment: departments[1], severity: 5, estimatedSlaHours: 4 },
+      admin,
+    )
     expect(updated.status).toBe(200)
     expect(await updated.json()).toMatchObject({
-      assignedDepartment: departments[1], upvotes: 1, aiTriage: { severity: 5, urgencyLabel: 'Critical', estimatedSlaHours: 4 },
+      assignedDepartment: departments[1],
+      upvotes: 1,
+      aiTriage: { severity: 5, urgencyLabel: 'Critical', estimatedSlaHours: 4 },
     })
   })
 
@@ -150,12 +180,15 @@ describe('roles, verification and escalation', () => {
     expect((await update(ticket.id, { status: 'RESOLVED' }, roads)).status).toBe(400)
     mockResult({ verified: false, confidence: 0.87, notes: 'The hazard remains visible.' })
     expect(await (await update(ticket.id, close, roads)).json()).toMatchObject({
-      status: 'IN_PROGRESS', resolutionVerification: { verified: false },
+      status: 'IN_PROGRESS',
+      resolutionVerification: { verified: false },
     })
     expect(generate.mock.lastCall?.[0].contents[0].parts.filter((part: object) => 'inlineData' in part)).toHaveLength(2)
     mockResult({ verified: true, confidence: 0.94, notes: 'The same roadway is visibly repaired.' })
     expect(await (await update(ticket.id, close, roads)).json()).toMatchObject({
-      status: 'RESOLVED', resolutionVerification: { verified: true }, handledBy: 'roads@civicresolve.gov',
+      status: 'RESOLVED',
+      resolutionVerification: { verified: true },
+      handledBy: 'roads@civicresolve.gov',
     })
     const detail = await issueDetail(input(undefined, undefined, 'GET'), context(ticket.id))
     expect(await detail.json()).toMatchObject({ resolutionImageBase64: image })
@@ -166,7 +199,9 @@ describe('roles, verification and escalation', () => {
     expect((await escalation(input({ language: 'Tamil' }), context(ticket.id))).status).toBe(409)
     await mutateIssue(ticket.id, issue => ({ ...issue!, createdAt: '2020-01-01T00:00:00.000Z' }))
     mockResult({ letter: 'நகராட்சி புகார் கடிதம்' })
-    expect(await (await escalation(input({ language: 'Tamil' }), context(ticket.id))).json()).toEqual({ letter: 'நகராட்சி புகார் கடிதம்' })
+    expect(await (await escalation(input({ language: 'Tamil' }), context(ticket.id))).json()).toEqual({
+      letter: 'நகராட்சி புகார் கடிதம்',
+    })
   })
 
   it('loads multilingual demo reports across every department without duplicating them', async () => {

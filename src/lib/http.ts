@@ -1,7 +1,13 @@
 import { z } from 'zod'
 
 export class HttpError extends Error {
-  constructor(public status: number, message: string, public extra: object = {}) { super(message) }
+  constructor(
+    public status: number,
+    message: string,
+    public extra: object = {},
+  ) {
+    super(message)
+  }
 }
 
 export function route<T extends unknown[]>(handler: (...args: T) => Promise<Response>) {
@@ -9,8 +15,13 @@ export function route<T extends unknown[]>(handler: (...args: T) => Promise<Resp
     try {
       return await handler(...args)
     } catch (error) {
-      if (error instanceof HttpError) return Response.json({ ...error.extra, error: error.message }, { status: error.status, headers: { 'Cache-Control': 'no-store' } })
-      if (error instanceof z.ZodError) return Response.json({ error: error.issues.map(issue => issue.message).join('. ') }, { status: 400 })
+      if (error instanceof HttpError)
+        return Response.json(
+          { ...error.extra, error: error.message },
+          { status: error.status, headers: { 'Cache-Control': 'no-store' } },
+        )
+      if (error instanceof z.ZodError)
+        return Response.json({ error: error.issues.map(issue => issue.message).join('. ') }, { status: 400 })
       console.error('CivicResolve request failed', error instanceof Error ? error.message : 'Unknown error')
       return Response.json({ error: 'The request could not be completed. Please try again.' }, { status: 500 })
     }

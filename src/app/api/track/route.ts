@@ -1,5 +1,5 @@
-import { trackByRef } from '../../../lib/civic'
-import { HttpError, route } from '../../../lib/http'
+import { trackByRef } from '@/lib/civic'
+import { HttpError, route } from '@/lib/http'
 
 export const dynamic = 'force-dynamic'
 

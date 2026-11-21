@@ -1,6 +1,6 @@
-import { requireOfficer } from '../../../../lib/auth'
-import { HttpError, route } from '../../../../lib/http'
-import { deleteNotice } from '../../../../lib/store'
+import { requireOfficer } from '@/lib/auth'
+import { HttpError, route } from '@/lib/http'
+import { deleteNotice } from '@/lib/store'
 
 export const DELETE = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   requireOfficer(request, true)

@@ -24,7 +24,7 @@
 
 **Google technologies:** Gemini API (`@google/genai`, structured output, multimodal), Firebase Authentication (Google sign-in), Cloud Firestore, Firebase App Hosting (Cloud Run + Secret Manager).
 
-**Security:** 3-tier RBAC enforced on every API route, signed HTTP-only sessions, captcha + OTP second factor + lockout for officers, citizen PII masked publicly. 20 automated tests (`npm test`).
+**Security:** 3-tier RBAC enforced on every API route, signed HTTP-only sessions, captcha + OTP second factor + lockout for officers, citizen PII masked publicly. 45 automated tests (`npm test`) run in CI on every push.
 
 CivicResolve routes multilingual infrastructure reports to municipal teams. Citizens can file reports and follow progress. Field staff work within their department, and the commissioner can reassign tickets or change priorities.
 
@@ -108,8 +108,9 @@ The container listens on port 8080. Supply the same runtime secrets and credenti
 ## Verification
 
 ```sh
-npm test
+npm run typecheck && npm run lint && npm test
+npm run coverage
 npm run build
 ```
 
-Vitest uses mocked Gemini responses and the in-memory repository. The suite covers the 100-meter boundary, duplicate merges, multilingual triage, spam rejection, status transitions, photo verification, role enforcement, SLA escalation, demo seeding, model failover and keyword fallback, captcha + OTP + lockout sign-in, citizen OTP and data masking, feedback/reopen ownership, notices, CSV export and escalation levels.
+Vitest uses mocked Gemini responses and the in-memory repository. A GitHub Actions workflow (`.github/workflows/ci.yml`) runs type checks, ESLint, Prettier, tests and the build on every push. Unit tests cover SLA escalation thresholds, keyword routing in 5 languages, input validation, mobile masking and dashboard statistics. Integration tests cover the 100-meter boundary, duplicate merges, multilingual triage, spam rejection, status transitions, photo verification, role enforcement, SLA escalation, demo seeding, model failover and keyword fallback, captcha + OTP + lockout sign-in, citizen OTP and data masking, feedback/reopen ownership, notices, CSV export and escalation levels.

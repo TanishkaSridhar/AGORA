@@ -1,5 +1,5 @@
-import { updateIssue, visibleIssue } from '../../../../lib/civic'
-import { json, route } from '../../../../lib/http'
+import { updateIssue, visibleIssue } from '@/lib/civic'
+import { json, route } from '@/lib/http'
 
 type Context = { params: Promise<{ id: string }> }
 export const dynamic = 'force-dynamic'

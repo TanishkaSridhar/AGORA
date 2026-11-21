@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import { googleLogin, sessionCookie } from '../../../../lib/auth'
-import { json, route } from '../../../../lib/http'
+import { googleLogin, sessionCookie } from '@/lib/auth'
+import { json, route } from '@/lib/http'
 
 export const POST = route(async (request: Request) => {
   const { idToken } = z.object({ idToken: z.string().min(20).max(5000) }).parse(await json(request))

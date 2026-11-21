@@ -1,7 +1,7 @@
-import { aiStatus } from '../../../../lib/ai'
-import { requireOfficer } from '../../../../lib/auth'
-import { route } from '../../../../lib/http'
-import { storeMode } from '../../../../lib/store'
+import { aiStatus } from '@/lib/ai'
+import { requireOfficer } from '@/lib/auth'
+import { route } from '@/lib/http'
+import { storeMode } from '@/lib/store'
 
 export const dynamic = 'force-dynamic'
 

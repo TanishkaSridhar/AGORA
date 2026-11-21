@@ -1,4 +1,4 @@
-import { captcha } from '../../../../lib/auth'
+import { captcha } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 

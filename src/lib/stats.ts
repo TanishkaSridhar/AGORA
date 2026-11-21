@@ -1,15 +1,18 @@
 import { departments, escalationLevel, isOverdue, statuses, type Department, type IssueSummary } from './model'
 
 const resolvedAt = (issue: IssueSummary) =>
-  [...(issue.audit ?? [])].reverse().find(entry => /Disposed|RESOLVED/.test(entry.action))?.at ?? (issue.status === 'RESOLVED' ? issue.updatedAt : undefined)
+  [...(issue.audit ?? [])].reverse().find(entry => /Disposed|RESOLVED/.test(entry.action))?.at ??
+  (issue.status === 'RESOLVED' ? issue.updatedAt : undefined)
 
 export function stats(issues: IssueSummary[], now = Date.now()) {
   const open = issues.filter(issue => issue.status !== 'RESOLVED')
   const resolved = issues.filter(issue => issue.status === 'RESOLVED')
-  const hours = resolved.map(issue => {
-    const at = resolvedAt(issue)
-    return at ? (Date.parse(at) - Date.parse(issue.createdAt)) / 3_600_000 : undefined
-  }).filter((value): value is number => value !== undefined && value >= 0)
+  const hours = resolved
+    .map(issue => {
+      const at = resolvedAt(issue)
+      return at ? (Date.parse(at) - Date.parse(issue.createdAt)) / 3_600_000 : undefined
+    })
+    .filter((value): value is number => value !== undefined && value >= 0)
   const withinSla = resolved.filter(issue => {
     const at = resolvedAt(issue)
     return at && Date.parse(at) - Date.parse(issue.createdAt) <= issue.aiTriage.estimatedSlaHours * 3_600_000
@@ -38,7 +41,9 @@ export function stats(issues: IssueSummary[], now = Date.now()) {
 export function byDepartment(issues: IssueSummary[], now = Date.now()) {
   return departments.map(department => {
     const list = issues.filter(issue => issue.assignedDepartment === department)
-    const values = Object.fromEntries(statuses.map(status => [status, list.filter(issue => issue.status === status).length])) as Record<string, number>
+    const values = Object.fromEntries(
+      statuses.map(status => [status, list.filter(issue => issue.status === status).length]),
+    ) as Record<string, number>
     return { department, list, values, ...stats(list, now) }
   })
 }
@@ -64,10 +69,16 @@ export function wardHotspots(issues: IssueSummary[]) {
     const ward = issue.location.ward || issue.location.address.split(',').slice(-2).join(',').trim() || 'Unspecified'
     map.set(ward, [...(map.get(ward) ?? []), issue])
   }
-  return [...map].map(([ward, list]) => ({ ward, list, score: list.reduce((sum, issue) => sum + issue.aiTriage.severity + issue.upvotes * 0.3, 0) }))
+  return [...map]
+    .map(([ward, list]) => ({
+      ward,
+      list,
+      score: list.reduce((sum, issue) => sum + issue.aiTriage.severity + issue.upvotes * 0.3, 0),
+    }))
     .sort((a, b) => b.score - a.score)
 }
 
 export const shortDept = (department: Department | string) => String(department).split(' & ')[0]
-export const hoursLabel = (hours?: number) => hours === undefined ? '—' : hours < 48 ? `${hours.toFixed(1)} h` : `${(hours / 24).toFixed(1)} days`
-export const percent = (value?: number) => value === undefined ? '—' : Math.round(value * 100) + '%'
+export const hoursLabel = (hours?: number) =>
+  hours === undefined ? '—' : hours < 48 ? `${hours.toFixed(1)} h` : `${(hours / 24).toFixed(1)} days`
+export const percent = (value?: number) => (value === undefined ? '—' : Math.round(value * 100) + '%')
