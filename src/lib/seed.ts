@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { departments, urgency, type AuditEntry, type CivicIssue, type IssueStatus } from './model'
-import { mutateIssue } from './store'
+import { listIssues, mutateIssue } from './store'
 
 type Example = {
   id: string; photo: 'roads' | 'waste' | 'drain' | 'light'; title: string; original: string; language: string
@@ -68,4 +68,14 @@ export async function seedIssues() {
     }
     return mutateIssue(example.id, current => current ?? issue)
   }))
+}
+
+const seedState = globalThis as typeof globalThis & { agoraSeedChecked?: Promise<void> }
+
+/** When CIVIC_AUTO_SEED=true, loads the demo register once per instance if it is empty, so evaluators never see a blank portal. */
+export function ensureDemoData() {
+  if (process.env.CIVIC_AUTO_SEED !== 'true') return Promise.resolve()
+  seedState.agoraSeedChecked ??= listIssues().then(async issues => { if (!issues.length) await seedIssues() })
+    .catch(error => { seedState.agoraSeedChecked = undefined; console.warn('Auto-seed failed', error instanceof Error ? error.message : error) })
+  return seedState.agoraSeedChecked
 }

@@ -3,12 +3,14 @@ import { readSession } from '../../../lib/auth'
 import { view } from '../../../lib/civic'
 import { route } from '../../../lib/http'
 import { departments, statuses } from '../../../lib/model'
+import { ensureDemoData } from '../../../lib/seed'
 import { listIssues } from '../../../lib/store'
 import { POST as submit } from '../triage/route'
 
 export const dynamic = 'force-dynamic'
 export const POST = submit
 export const GET = route(async (request: Request) => {
+  await ensureDemoData()
   const params = new URL(request.url).searchParams
   const session = readSession(request)
   const department = z.enum(departments).optional().parse(params.get('department') ?? undefined)

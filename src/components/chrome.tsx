@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Building2, ClipboardList, FileSearch, HelpCircle, Home, Landmark, LayoutDashboard, LogIn, LogOut, Megaphone, ScrollText, ShieldCheck, User } from 'lucide-react'
+import { AlertTriangle, Award, Building2, ClipboardList, FileSearch, HelpCircle, Home, Landmark, LayoutDashboard, LogIn, LogOut, Megaphone, ScrollText, ShieldCheck, User } from 'lucide-react'
 import type { Notice } from '../lib/model'
 import { request } from './client'
 import { setFontSize, toggleContrast, usePortal } from './providers'
@@ -63,6 +63,7 @@ export function MainNav() {
     { href: '/dashboard', label: t('dashboard'), Icon: LayoutDashboard },
     { href: '/charter', label: t('charter'), Icon: ScrollText },
     { href: '/help', label: t('help'), Icon: HelpCircle },
+    ...(session?.demoEnabled ? [{ href: '/judges', label: 'For Judges', Icon: Award }] : []),
     ...(citizen ? [{ href: '/my', label: t('my'), Icon: User }] : []),
     ...(officer ? [{ href: '/admin', label: t('console'), Icon: Building2 }] : []),
   ]

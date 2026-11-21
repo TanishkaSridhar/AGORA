@@ -7,15 +7,36 @@ runConfig:
 env:
   - variable: GEMINI_API_KEY
     secret: GEMINI_API_KEY
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     value: agora26
   - variable: CIVIC_SESSION_SECRET
     secret: CIVIC_SESSION_SECRET
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: CIVIC_PASSWORD_ROADS
     secret: CIVIC_DEMO_ROADS_PASSWORD
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: CIVIC_PASSWORD_SANITATION
     secret: CIVIC_DEMO_SANITATION_PASSWORD
+    availability: [ RUNTIME ]
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: agora26.firebaseapp.com
+    availability: [ BUILD, RUNTIME ]
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:857324476053:web:e482a97dce4a03473aad9c"
+    availability: [ BUILD, RUNTIME ]
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyD84H4lzjMn0MMesT7v4G-Yu8lkfbXLsk4
+    availability: [ BUILD, RUNTIME ]
+  - variable: CIVIC_GOOGLE_OFFICERS
+    secret: CIVIC_GOOGLE_OFFICERS
+  - variable: CIVIC_GOOGLE_OFFICERS
+    secret: CIVIC_GOOGLE_OFFICERS
+    availability: [RUNTIME]
+  # Hackathon judging: one-click role access, on-screen demo OTPs, and sample data on an empty register.
+  - variable: CIVIC_DEMO_LOGIN
+    value: "true"
+    availability: [RUNTIME]
+  - variable: CIVIC_AUTO_SEED
+    value: "true"
     availability: [RUNTIME]

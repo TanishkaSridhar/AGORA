@@ -1,5 +1,29 @@
 # AGORA
 
+**AI-powered multilingual citizen grievance redressal portal for Indian municipalities, built with Google Gemini and Firebase.**
+
+## For judges and evaluators
+
+- **Live app:** https://agora-web--agora26.asia-southeast1.hosted.app
+- **Evaluator guide:** https://agora-web--agora26.asia-southeast1.hosted.app/judges has one-click access to the Commissioner and department officer roles (no password) and a five-minute walkthrough.
+- **Citizen flow:** `/lodge` → submit any civic photo with a description in any Indian language → registration number → `/track`.
+- **Officer console:** `/admin` → Overview, Grievance register, SLA & escalations, Map, AI insights, Department performance, Public notices, Audit log.
+- The live register is pre-loaded with 16 synthetic grievances in 8 languages. Demo OTPs are shown on screen.
+
+| Problem | How AGORA solves it | Where to see it |
+| --- | --- | --- |
+| Complaints are in many languages and reach the wrong office | Gemini multimodal triage reads photo + text in 8 languages, routes to 1 of 5 departments, sets severity, SLA and an English work order, and replies in the citizen's language | `/lodge` → acknowledgement slip |
+| Duplicate complaints flood departments | 100 m geo radius + Gemini visual match merges duplicates and boosts priority | "+N merged" badges in the register |
+| Cases are closed without real work | Gemini compares before and after photos; disposal is blocked unless the fix is visible | Console → case drawer → "Verify & dispose" |
+| Overdue complaints are ignored | SLA timers, automatic L1→L3 escalation, AI-drafted escalation letters | Console → SLA & escalations; `/track` |
+| Leaders lack a situational picture | Gemini Commissioner brief: hotspots, systemic patterns, prioritised actions | Console → AI insights |
+| Citizens can't follow progress | Registration numbers, status timeline, officer remarks auto-translated, rating and reopen | `/track`, `/my` |
+| AI outages break the service | Model failover chain with timeouts; keyword routing + AI re-triage queue if all models fail | Console → AI insights → AI engine status |
+
+**Google technologies:** Gemini API (`@google/genai`, structured output, multimodal), Firebase Authentication (Google sign-in), Cloud Firestore, Firebase App Hosting (Cloud Run + Secret Manager).
+
+**Security:** 3-tier RBAC enforced on every API route, signed HTTP-only sessions, captcha + OTP second factor + lockout for officers, citizen PII masked publicly. 21 automated tests (`npm test`).
+
 AGORA routes multilingual infrastructure reports to municipal teams. Citizens can file reports and follow progress. Field staff work within their department, and the commissioner can reassign tickets or change priorities.
 
 ## What's in the portal

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { BadgeCheck, Building2, ClipboardList, Droplets, FileSearch, Languages, LayoutDashboard, Lightbulb, Route, ScrollText, ShieldCheck, Trash2, Trees, User } from 'lucide-react'
+import { Award, BadgeCheck, Building2, ClipboardList, Droplets, FileSearch, Languages, LayoutDashboard, Lightbulb, Route, ScrollText, ShieldCheck, Trash2, Trees, User } from 'lucide-react'
 import { dateLabel, request } from '../components/client'
 import { Panel, StatusBadge } from '../components/ui'
 import { usePortal } from '../components/providers'
@@ -24,6 +24,7 @@ export default function Home() {
   const recent = (issues ?? []).filter(issue => issue.status === 'RESOLVED').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 4)
 
   return <div className="stack" style={{ gap: '1.25rem' }}>
+    {session?.demoEnabled && <div className="alert alert-info"><Award size={18} /><div><strong>Evaluating AGORA?</strong> The <Link href="/judges">evaluator guide</Link> has one-click Commissioner / Officer access (no password) and a five-minute walkthrough of every AI feature.</div></div>}
     <section className="hero">
       <div className="hero-body">
         <span className="badge" style={{ background: '#ffffff1a', color: '#fff', borderColor: '#ffffff33', justifySelf: 'start' }}><ShieldCheck size={13} />Swift · Transparent · Accountable</span>
